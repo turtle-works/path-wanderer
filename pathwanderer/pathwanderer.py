@@ -146,15 +146,14 @@ class PathWanderer(commands.Cog):
 			lore_indicator = "Lore: "
 		# catchall error, but shouldn't be able to get here
 		else:
-			await ctx.send(f"Couldn't understand `{check_name}`.")
+			await ctx.send(f"Could not understand `{check_name}`.")
 			return
 
 		name = char_data['name']
 		article = "an" if skill[0] in ["a", "e", "i", "o", "u"] else "a"
-		skill_formatted = skill[0].upper() + skill[1:]
 
 		embed = discord.Embed()
-		embed.title = f"{name} makes {article} {lore_indicator}{skill_formatted} check!"
+		embed.title = f"{name} makes {article} {lore_indicator}{skill.capitalize()} check!"
 		embed.description = self._get_roll_string(self.roll_d20(), mod)
 
 		await ctx.send(embed=embed)
@@ -167,10 +166,9 @@ class PathWanderer(commands.Cog):
 				return (SKILL_DATA[skill][TYPE], skill)
 
 		# check lore skills
-		check_name = check_name[0].upper() + check_name[1:]
 		lores = char_data['lores']
 		for i in range(len(lores)):
-			if lores[i][0] == check_name:
+			if lores[i][0] == check_name.capitalize():
 				return ("lore", lores[i][0].lower())
 
 		return None, None
@@ -189,8 +187,6 @@ class PathWanderer(commands.Cog):
 		return ability_mod + prof_bonus
 
 	def _get_lore_mod(self, lore_name: str, char_data: dict):
-		lore_name = lore_name[0].upper() + lore_name[1:]
-
 		abilities = char_data['abilities']
 		level = char_data['level']
 		# list of lists of size 2 where [0] is the Name and [1] is the bonus
@@ -200,7 +196,7 @@ class PathWanderer(commands.Cog):
 
 		prof_bonus = 0
 		for i in range(len(lores)):
-			if lores[i][0] == lore_name:
+			if lores[i][0] == lore_name.capitalize():
 				prof_bonus = lores[i][1] + (0 if lores[i][1] == 0 else level)
 
 		return ability_mod + prof_bonus
