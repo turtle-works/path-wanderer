@@ -72,7 +72,7 @@ class PathWanderer(commands.Cog):
         """
         await self.config.user_from_id(user_id).clear()
 
-    @commands.command(aliases=['import', 'mmimport', 'pfimport'])
+    @commands.command(aliases=["import", "mmimport", "pfimport"])
     async def loadchar(self, ctx, url: str):
         """Import from a Pathbuilder 2e JSON."""
         if re.match(PATHBUILDER_URL_TEMPLATE, url):
@@ -85,7 +85,7 @@ class PathWanderer(commands.Cog):
             await ctx.send("Couldn't parse that as a link to a Pathbuilder 2e JSON.")
             return
 
-        json_id = char_url.split('=')[1]
+        json_id = char_url.split("=")[1]
         async with self.config.user(ctx.author).characters() as characters:
             if json_id in characters:
                 await ctx.send("This character has already been imported, use `update` instead.")
@@ -109,7 +109,7 @@ class PathWanderer(commands.Cog):
         await ctx.send(f"Imported data for character with name {char_data['build']['name']} " + \
             f"and JSON ID {json_id}.")
 
-    @commands.command(aliases=['pfupdate'])
+    @commands.command(aliases=["pfupdate"])
     async def update(self, ctx):
         """Update data for the active character."""
         json_id = await self.config.user(ctx.author).active_char()
@@ -136,7 +136,7 @@ class PathWanderer(commands.Cog):
             f"and JSON ID {json_id}. (Note that changes cannot be pulled until Export JSON " + \
             "is selected again.)")
 
-    @commands.group(aliases=['char', 'pfchar'])
+    @commands.group(aliases=["char", "pfchar"])
     async def character(self, ctx):
         """Commands for character management."""
 
@@ -158,7 +158,7 @@ class PathWanderer(commands.Cog):
 
         await ctx.send("Your characters:\n" + "\n".join(sorted(lines)))
 
-    @character.command(name="setactive", aliases=['set', 'switch'])
+    @character.command(name="setactive", aliases=["set", "switch"])
     async def character_set(self, ctx, *, query: str):
         """Set the active character."""
         characters = await self.config.user(ctx.author).characters()
@@ -172,7 +172,7 @@ class PathWanderer(commands.Cog):
         await self.config.user(ctx.author).active_char.set(character_id)
         await ctx.send(f"{characters[character_id]['build']['name']} made active.")
 
-    @character.command(name="remove", aliases=['delete'])
+    @character.command(name="remove", aliases=["delete"])
     async def character_remove(self, ctx, *, query: str):
         """Remove a character from the list."""
         async with self.config.user(ctx.author).characters() as characters:
@@ -200,7 +200,7 @@ class PathWanderer(commands.Cog):
 
         return None
 
-    @commands.command(aliases=['c', 'pfc', 'pfcheck'])
+    @commands.command(aliases=["c", "pfc", "pfcheck"])
     async def check(self, ctx, check_name: str):
         """Make a skill check as the active character."""
         json_id = await self.config.user(ctx.author).active_char()
@@ -248,7 +248,7 @@ class PathWanderer(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command(aliases=['s', 'pfs', 'pfsave'])
+    @commands.command(aliases=["s", "pfs", "pfsave"])
     async def save(self, ctx, save_name: str):
         """Make a saving throw as the active character."""
         json_id = await self.config.user(ctx.author).active_char()
