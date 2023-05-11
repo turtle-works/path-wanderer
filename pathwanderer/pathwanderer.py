@@ -106,9 +106,6 @@ class PathWanderer(commands.Cog):
 		await ctx.send(f"Imported data for character with name {char_data['build']['name']} " + \
 			f"and JSON ID {json_id}.")
 
-	def roll_d20(self):
-		return math.ceil(random.random() * 20)
-
 	@commands.command(aliases=['c', 'pfc', 'pfcheck'])
 	async def check(self, ctx, check_name: str):
 		"""Make a skill check as the active character."""
@@ -157,6 +154,41 @@ class PathWanderer(commands.Cog):
 		embed.description = self._get_roll_string(self.roll_d20(), mod)
 
 		await ctx.send(embed=embed)
+
+	@commands.command(aliases=['s', 'pfs', 'pfsave'])
+	async def save(self, ctx, save_name: str):
+		"""Make a saving throw as the active character."""
+		json_id = await self.config.user(ctx.author).active_char()
+		if json_id is None:
+			# TODO: after it's written, inform what command is used to set said active character
+			await ctx.send("Set an active character first.")
+			return
+
+		data = await self.config.user(ctx.author).characters()
+		char_data = data[json_id]['build']
+
+		save_name = save_name.lower()
+
+		skill_type, skill = self.find_skill_type(save_name, char_data)
+		if not skill_type:
+			await ctx.send(f"Could not interpret `{save_name}` as a save.")
+			return
+		if skill_type != "save":
+			await ctx.send(f"`{skill}` is a check.")
+			return
+
+		mod = self._get_skill_mod(skill, char_data)
+
+		name = char_data['name']
+
+		embed = discord.Embed()
+		embed.title = f"{name} makes a {skill.capitalize()} save!"
+		embed.description = self._get_roll_string(self.roll_d20(), mod)
+
+		await ctx.send(embed=embed)
+
+	def roll_d20(self):
+		return math.ceil(random.random() * 20)
 
 	def find_skill_type(self, check_name: str, char_data: dict):
 		# check predefined data
