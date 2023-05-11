@@ -112,9 +112,6 @@ class PathWanderer(commands.Cog):
 	@commands.command(aliases=['c', 'pfc', 'pfcheck'])
 	async def check(self, ctx, check_name: str):
 		"""Make a skill check as the active character."""
-		# TODO: check name validity: i.e. map to a known skill name or give an error
-		skill = check_name.lower()
-
 		json_id = await self.config.user(ctx.author).active_char()
 		if json_id is None:
 			# TODO: after it's written, inform what command is used to set said active character
@@ -124,18 +121,59 @@ class PathWanderer(commands.Cog):
 		data = await self.config.user(ctx.author).characters()
 		char_data = data[json_id]['build']
 
+		check_name = check_name.lower()
+
+		if check_name in "lore":
+			await ctx.send("Please use a specific lore skill. Your options are: " + \
+				", ".join([lore[0] for lore in char_data['lores']]))
+			return
+
+		skill_type, skill = self.find_skill_type(check_name, char_data)
+		if not skill_type:
+			await ctx.send(f"Could not interpret `{check_name}` as a check.")
+			return
+		if skill_type == "save":
+			await ctx.send(f"`{skill}` is a saving throw.")
+			return
+
+		lore_indicator = ""
+		if skill_type == "check":
+			mod = self._get_skill_mod(skill, char_data)
+		elif skill_type == "ability":
+			mod = self._get_ability_mod(char_data['abilities'][SKILL_DATA[skill][ABILITY]])
+		elif skill_type == "lore":
+			mod = self._get_lore_mod(skill, char_data)
+			lore_indicator = "Lore: "
+		# catchall error, but shouldn't be able to get here
+		else:
+			await ctx.send(f"Couldn't understand `{check_name}`.")
+			return
+
 		name = char_data['name']
 		article = "an" if skill[0] in ["a", "e", "i", "o", "u"] else "a"
 		skill_formatted = skill[0].upper() + skill[1:]
 
-		mod = self._get_skill_mod(skill, char_data)
-		result = self.roll_d20()
-
 		embed = discord.Embed()
-		embed.title = f"{name} makes {article} {skill_formatted} check!"
-		embed.description = self._get_roll_string(result, mod)
+		embed.title = f"{name} makes {article} {lore_indicator}{skill_formatted} check!"
+		embed.description = self._get_roll_string(self.roll_d20(), mod)
 
 		await ctx.send(embed=embed)
+
+	def find_skill_type(self, check_name: str, char_data: dict):
+		# check predefined data
+		for skill in SKILL_DATA:
+			# note that "int" will always go to intelligence instead of intimidation
+			if check_name in skill:
+				return (SKILL_DATA[skill][TYPE], skill)
+
+		# check lore skills
+		check_name = check_name[0].upper() + check_name[1:]
+		lores = char_data['lores']
+		for i in range(len(lores)):
+			if lores[i][0] == check_name:
+				return ("lore", lores[i][0].lower())
+
+		return None, None
 
 	def _get_ability_mod(self, score: int):
 		return math.floor((score - 10) / 2)
