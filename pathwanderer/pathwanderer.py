@@ -72,7 +72,7 @@ class PathWanderer(commands.Cog):
 		"""
 		await self.config.user_from_id(user_id).clear()
 
-	@commands.command(aliases=['import', 'mmimport'])
+	@commands.command(aliases=['import', 'mmimport', 'pfimport'])
 	async def loadchar(self, ctx, url: str):
 		"""Import from a Pathbuilder 2e JSON."""
 		if re.match(PATHBUILDER_URL_TEMPLATE, url):
@@ -93,18 +93,48 @@ class PathWanderer(commands.Cog):
 				char_data = json.loads(response_text)
 
 		if not char_data['success']:
-			await ctx.send("This character did not build successfully. Aborting import.\n" + \
+			await ctx.send("The build was unsuccessful. Aborting import.\n" + \
 				"This is not a problem with the command; please check in Pathbuilder 2e.")
 			return
 
 		async with self.config.user(ctx.author).characters() as characters:
-			# TODO: after it's written, remind about [p]update instead of overriding each time
+			if json_id in characters:
+				await ctx.send("This character has already been imported, use [p]update instead.")
+				return
 			characters[json_id] = char_data
 
 		await self.config.user(ctx.author).active_char.set(json_id)
 
 		await ctx.send(f"Imported data for character with name {char_data['build']['name']} " + \
 			f"and JSON ID {json_id}.")
+
+	@commands.command()
+	async def update(self, ctx):
+		"""Update data for the active character."""
+		json_id = await self.config.user(ctx.author).active_char()
+		if json_id is None:
+			# TODO: after it's written, inform what command is used to set said active character
+			await ctx.send("Set an active character first.")
+			return
+
+		char_url = PATHBUILDER_URL_BASE + json_id
+
+		async with aiohttp.ClientSession() as session:
+			async with session.get(char_url) as response:
+				response_text = await response.text()
+				char_data = json.loads(response_text)
+
+		if not char_data['success']:
+			await ctx.send("The build was unsuccessful. Aborting update.\n" + \
+				"This is not a problem with the command; please check in Pathbuilder 2e.")
+			return
+
+		async with self.config.user(ctx.author).characters() as characters:
+			characters[json_id] = char_data
+
+		await ctx.send(f"Updated data for character with name {char_data['build']['name']} " + \
+			f"and JSON ID {json_id}. (Note that changes will not show until the JSON is " + \
+			"exported again. Simply editing on Pathbuilder 2e is insufficient.)")
 
 	@commands.command(aliases=['c', 'pfc', 'pfcheck'])
 	async def check(self, ctx, check_name: str):
