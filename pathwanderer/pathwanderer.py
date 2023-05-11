@@ -1,14 +1,48 @@
-import aiohttp
-import discord
 import json
+import math
+import random
 import re
 
+import aiohttp
+import discord
 from redbot.core import Config, commands
 
 HTTP_ROOT = "https://"
 PATHBUILDER_URL_BASE = "https://pathbuilder2e.com/json.php?id="
 JUST_DIGITS = r"\d+$"
 PATHBUILDER_URL_TEMPLATE = r"https://pathbuilder2e.com/json.php\?id=\d+$"
+
+# TODO: shouldn't there be a better way to store this somewhere?
+TYPE = 0
+ABILITY = 1
+SKILL_DATA = {
+	'acrobatics': ("check", "dex"),
+	'arcana': ("check", "int"),
+	'athletics': ("check", "str"),
+	'charisma': ("ability", "cha"),
+	'constitution': ("ability", "con"),
+	'crafting': ("check", "int"),
+	'deception': ("check", "cha"),
+	'dexterity': ("ability", "dex"),
+	'diplomacy': ("check", "cha"),
+	'fortitude': ("save", "con"),
+	'intelligence': ("ability", "int"),
+	'intimidation': ("check", "cha"),
+	'medicine': ("check", "wis"),
+	'nature': ("check", "wis"),
+	'occultism': ("check", "int"),
+	'perception': ("check", "wis"),
+	'performance': ("check", "cha"),
+	'reflex': ("save", "dex"),
+	'religion': ("check", "wis"),
+	'society': ("check", "int"),
+	'stealth': ("check", "dex"),
+	'strength': ("ability", "str"),
+	'survival': ("check", "wis"),
+	'thievery': ("check", "dex"),
+	'will': ("save", "wis"),
+	'wisdom': ("ability", "wis")
+}
 
 
 class PathWanderer(commands.Cog):
@@ -71,3 +105,69 @@ class PathWanderer(commands.Cog):
 
 		await ctx.send(f"Imported data for character with name {char_data['build']['name']} " + \
 			f"and JSON ID {json_id}.")
+
+	def roll_d20(self):
+		return math.ceil(random.random() * 20)
+
+	@commands.command(aliases=['c', 'pfc', 'pfcheck'])
+	async def check(self, ctx, check_name: str):
+		"""Make a skill check as the active character."""
+		# TODO: check name validity: i.e. map to a known skill name or give an error
+		skill = check_name.lower()
+
+		json_id = await self.config.user(ctx.author).active_char()
+		if json_id is None:
+			# TODO: after it's written, inform what command is used to set said active character
+			await ctx.send("Set an active character first.")
+			return
+
+		data = await self.config.user(ctx.author).characters()
+		char_data = data[json_id]['build']
+
+		name = char_data['name']
+		article = "an" if skill[0] in ["a", "e", "i", "o", "u"] else "a"
+		skill_formatted = skill[0].upper() + skill[1:]
+
+		mod = self._get_skill_mod(skill, char_data)
+		result = self.roll_d20()
+
+		embed = discord.Embed()
+		embed.title = f"{name} makes {article} {skill_formatted} check!"
+		embed.description = self._get_roll_string(result, mod)
+
+		await ctx.send(embed=embed)
+
+	def _get_ability_mod(self, score: int):
+		return math.floor((score - 10) / 2)
+
+	def _get_skill_mod(self, skill: str, char_data: dict):
+		abilities = char_data['abilities']
+		level = char_data['level']
+		profs = char_data['proficiencies']
+
+		ability_mod = self._get_ability_mod(abilities[SKILL_DATA[skill][ABILITY]])
+		prof_bonus = profs[skill] + (0 if profs[skill] == 0 else level)
+
+		return ability_mod + prof_bonus
+
+	def _get_lore_mod(self, lore_name: str, char_data: dict):
+		lore_name = lore_name[0].upper() + lore_name[1:]
+
+		abilities = char_data['abilities']
+		level = char_data['level']
+		# list of lists of size 2 where [0] is the Name and [1] is the bonus
+		lores = char_data['lores']
+
+		ability_mod = self._get_ability_mod(abilities['int'])
+
+		prof_bonus = 0
+		for i in range(len(lores)):
+			if lores[i][0] == lore_name:
+				prof_bonus = lores[i][1] + (0 if lores[i][1] == 0 else level)
+
+		return ability_mod + prof_bonus
+
+	def _get_roll_string(self, die_roll: int, mod: int):
+		op = "-" if mod < 0 else "+"
+		die_display = f"**{die_roll}**" if die_roll in [1, 20] else die_roll
+		return f"1d20 ({die_display}) {op} {mod} = `{die_roll + mod}`"
