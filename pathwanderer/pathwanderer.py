@@ -86,6 +86,10 @@ class PathWanderer(commands.Cog):
 			return
 
 		json_id = char_url.split('=')[1]
+		async with self.config.user(ctx.author).characters() as characters:
+			if json_id in characters:
+				await ctx.send("This character has already been imported, use `update` instead.")
+				return
 
 		async with aiohttp.ClientSession() as session:
 			async with session.get(char_url) as response:
@@ -98,9 +102,6 @@ class PathWanderer(commands.Cog):
 			return
 
 		async with self.config.user(ctx.author).characters() as characters:
-			if json_id in characters:
-				await ctx.send("This character has already been imported, use [p]update instead.")
-				return
 			characters[json_id] = char_data
 
 		await self.config.user(ctx.author).active_char.set(json_id)
@@ -108,13 +109,12 @@ class PathWanderer(commands.Cog):
 		await ctx.send(f"Imported data for character with name {char_data['build']['name']} " + \
 			f"and JSON ID {json_id}.")
 
-	@commands.command()
+	@commands.command(aliases=['pfupdate'])
 	async def update(self, ctx):
 		"""Update data for the active character."""
 		json_id = await self.config.user(ctx.author).active_char()
 		if json_id is None:
-			# TODO: after it's written, inform what command is used to set said active character
-			await ctx.send("Set an active character first.")
+			await ctx.send("Set an active character first with `character setactive`.")
 			return
 
 		char_url = PATHBUILDER_URL_BASE + json_id
@@ -133,16 +133,79 @@ class PathWanderer(commands.Cog):
 			characters[json_id] = char_data
 
 		await ctx.send(f"Updated data for character with name {char_data['build']['name']} " + \
-			f"and JSON ID {json_id}. (Note that changes will not show until the JSON is " + \
-			"exported again. Simply editing on Pathbuilder 2e is insufficient.)")
+			f"and JSON ID {json_id}. (Note that changes cannot be pulled until Export JSON " + \
+			"is selected again.)")
+
+	@commands.group(aliases=['char', 'pfchar'])
+	async def character(self, ctx):
+		"""Commands for character management."""
+
+	@character.command(name="list")
+	async def character_list(self, ctx):
+		"""Show all characters that the user has imported."""
+		characters = await self.config.user(ctx.author).characters()
+		if not characters:
+			await ctx.send("You have no characters.")
+			return
+
+		active_id = await self.config.user(ctx.author).active_char()
+
+		lines = []
+		for json_id in characters:
+			line = f"{characters[json_id]['build']['name']} (ID {json_id})"
+			line += " (**active**)" if json_id == active_id else ""
+			lines.append(line)
+
+		await ctx.send("Your characters:\n" + "\n".join(sorted(lines)))
+
+	@character.command(name="setactive", aliases=['set', 'switch'])
+	async def character_set(self, ctx, *, query: str):
+		"""Set the active character."""
+		characters = await self.config.user(ctx.author).characters()
+
+		character_id = await self.json_id_from_query(ctx, query)
+
+		if not character_id:
+			await ctx.send(f"Could not find a character to match `{query}`.")
+			return
+
+		await self.config.user(ctx.author).active_char.set(character_id)
+		await ctx.send(f"{characters[character_id]['build']['name']} made active.")
+
+	@character.command(name="remove", aliases=['delete'])
+	async def character_remove(self, ctx, *, query: str):
+		"""Remove a character from the list."""
+		async with self.config.user(ctx.author).characters() as characters:
+			character_id = await self.json_id_from_query(ctx, query)
+
+			if not character_id:
+				await ctx.send(f"Could not find a character to match `{query}`.")
+				return
+
+			name = characters[character_id]['build']['name']
+			characters.pop(character_id)
+			if await self.config.user(ctx.author).active_char() == character_id:
+				await self.config.user(ctx.author).active_char.set(None)
+
+			await ctx.send(f"{name} (ID {character_id}) has been removed from your characters.")
+
+	async def json_id_from_query(self, ctx, query: str):
+		query = query.lower()
+		characters = await self.config.user(ctx.author).characters()
+
+		for json_id in characters:
+			# either match to json id or partial match to a character name
+			if query == json_id or query in characters[json_id]['build']['name'].lower():
+				return json_id
+
+		return None
 
 	@commands.command(aliases=['c', 'pfc', 'pfcheck'])
 	async def check(self, ctx, check_name: str):
 		"""Make a skill check as the active character."""
 		json_id = await self.config.user(ctx.author).active_char()
 		if json_id is None:
-			# TODO: after it's written, inform what command is used to set said active character
-			await ctx.send("Set an active character first.")
+			await ctx.send("Set an active character first with `character setactive`.")
 			return
 
 		data = await self.config.user(ctx.author).characters()
@@ -190,8 +253,7 @@ class PathWanderer(commands.Cog):
 		"""Make a saving throw as the active character."""
 		json_id = await self.config.user(ctx.author).active_char()
 		if json_id is None:
-			# TODO: after it's written, inform what command is used to set said active character
-			await ctx.send("Set an active character first.")
+			await ctx.send("Set an active character first with `character setactive`.")
 			return
 
 		data = await self.config.user(ctx.author).characters()
