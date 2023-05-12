@@ -106,8 +106,7 @@ class PathWanderer(commands.Cog):
 
         await self.config.user(ctx.author).active_char.set(json_id)
 
-        await ctx.send(f"Imported data for character with name {char_data['build']['name']} " + \
-            f"and JSON ID {json_id}.")
+        await ctx.send(f"Imported data for {char_data['build']['name']}.")
 
     @commands.command(aliases=["pfupdate"])
     async def update(self, ctx):
@@ -132,9 +131,8 @@ class PathWanderer(commands.Cog):
         async with self.config.user(ctx.author).characters() as characters:
             characters[json_id] = char_data
 
-        await ctx.send(f"Updated data for character with name {char_data['build']['name']} " + \
-            f"and JSON ID {json_id}. (Note that changes cannot be pulled until Export JSON " + \
-            "is selected again.)")
+        await ctx.send(f"Updated data for {char_data['build']['name']}. " + \
+            f"(Note that changes cannot be pulled until Export JSON is selected again.)")
 
     @commands.group(aliases=["char", "pfchar"])
     async def character(self, ctx):
@@ -152,7 +150,7 @@ class PathWanderer(commands.Cog):
 
         lines = []
         for json_id in characters:
-            line = f"{characters[json_id]['build']['name']} (ID {json_id})"
+            line = f"{characters[json_id]['build']['name']}"
             line += " (**active**)" if json_id == active_id else ""
             lines.append(line)
 
@@ -187,7 +185,7 @@ class PathWanderer(commands.Cog):
             if await self.config.user(ctx.author).active_char() == character_id:
                 await self.config.user(ctx.author).active_char.set(None)
 
-            await ctx.send(f"{name} (ID {character_id}) has been removed from your characters.")
+            await ctx.send(f"{name} has been removed from your characters.")
 
     async def json_id_from_query(self, ctx, query: str):
         query = query.lower()
@@ -382,8 +380,6 @@ class PathWanderer(commands.Cog):
             lore_lines.append(f"{prof_label}{skill[0].capitalize()}: ({op}{mod})")
         lore_field = "\n".join(lore_lines)
         embed.add_field(name="Lores", value=lore_field, inline=True)
-
-        embed.set_footer(text=f"JSON ID: {json_id}")
 
         await ctx.send(embed=embed)
 
