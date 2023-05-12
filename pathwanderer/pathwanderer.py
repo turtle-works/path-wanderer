@@ -383,6 +383,8 @@ class PathWanderer(commands.Cog):
         lore_field = "\n".join(lore_lines)
         embed.add_field(name="Lores", value=lore_field, inline=True)
 
+        embed.set_footer(text=f"JSON ID: {json_id}")
+
         await ctx.send(embed=embed)
 
     def _get_prof_label(self, prof_bonus: int):
