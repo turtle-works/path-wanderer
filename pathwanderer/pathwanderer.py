@@ -201,7 +201,7 @@ class PathWanderer(commands.Cog):
         return None
 
     @commands.command(aliases=["c", "pfc", "pfcheck"])
-    async def check(self, ctx, check_name: str):
+    async def check(self, ctx, *, check_name: str):
         """Make a skill check as the active character."""
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
@@ -249,7 +249,7 @@ class PathWanderer(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(aliases=["s", "pfs", "pfsave"])
-    async def save(self, ctx, save_name: str):
+    async def save(self, ctx, *, save_name: str):
         """Make a saving throw as the active character."""
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
@@ -329,3 +329,72 @@ class PathWanderer(commands.Cog):
         op = "-" if mod < 0 else "+"
         die_display = f"**{die_roll}**" if die_roll in [1, 20] else die_roll
         return f"1d20 ({die_display}) {op} {mod} = `{die_roll + mod}`"
+
+    @commands.command(aliases=["pfsheet"])
+    async def sheet(self, ctx):
+        """Show the active character's sheet."""
+        json_id = await self.config.user(ctx.author).active_char()
+        if json_id is None:
+            await ctx.send("Set an active character first with `character setactive`.")
+            return
+
+        data = await self.config.user(ctx.author).characters()
+        char_data = data[json_id]['build']
+
+        embed = discord.Embed()
+        embed.title = f"{char_data['name']}"
+        embed.description = f"{char_data['class']} {char_data['level']}"
+
+        ability_lines = []
+        for ability in char_data['abilities']:
+            mod = self._get_ability_mod(char_data['abilities'][ability])
+            op = "-" if mod < 0 else "+"
+            ability_lines.append(f"**{ability.upper()}**: ({op}{mod})")
+        abilities_field = " ".join(ability_lines[:3]) + "\n" + " ".join(ability_lines[3:])
+        embed.add_field(name="Ability Scores", value=abilities_field, inline=False)
+
+        profs = char_data['proficiencies']
+        save_lines = []
+        skill_lines = []
+        for skill in SKILL_DATA:
+            if SKILL_DATA[skill][TYPE] == "ability":
+                continue
+            prof_label = self._get_prof_label(profs[skill])
+            mod = self._get_skill_mod(skill, char_data)
+            op = "-" if mod < 0 else "+"
+
+            line = f"{prof_label}{skill.capitalize()}: ({op}{mod})"
+            if SKILL_DATA[skill][TYPE] == "save":
+                save_lines.append(line)
+            else:
+                skill_lines.append(line)
+
+        save_field = "\n".join(save_lines)
+        embed.add_field(name="Saving Throws", value=save_field, inline=True)
+        skill_field = "\n".join(skill_lines)
+        embed.add_field(name="Skills", value=skill_field, inline=True)
+
+        lore_lines = []
+        for skill in char_data['lores']:
+            prof_label = self._get_prof_label(skill[1])
+            mod = self._get_lore_mod(skill[0].lower(), char_data)
+            op = "-" if mod < 0 else "+"
+            lore_lines.append(f"{prof_label}{skill[0].capitalize()}: ({op}{mod})")
+        lore_field = "\n".join(lore_lines)
+        embed.add_field(name="Lores", value=lore_field, inline=True)
+
+        await ctx.send(embed=embed)
+
+    def _get_prof_label(self, prof_bonus: int):
+        if prof_bonus == 8:
+            label = "(**L**) "
+        elif prof_bonus == 6:
+            label = "(**M**) "
+        elif prof_bonus == 4:
+            label = "(**E**) "
+        elif prof_bonus == 2:
+            label = "(**T**) "
+        else:
+            label = ""
+
+        return label
