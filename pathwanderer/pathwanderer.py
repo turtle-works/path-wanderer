@@ -253,7 +253,7 @@ class PathWanderer(commands.Cog):
 
         embed = discord.Embed()
         embed.title = f"{name} makes {article} {lore_indicator}{skill.capitalize()} check!"
-        embed.description = self._get_roll_string(self.roll_d20(), mod)
+        embed.description = self._get_roll_string(self.roll_die(), mod)
 
         await ctx.send(embed=embed)
 
@@ -284,15 +284,18 @@ class PathWanderer(commands.Cog):
 
         embed = discord.Embed()
         embed.title = f"{name} makes a {skill.capitalize()} save!"
-        embed.description = self._get_roll_string(self.roll_d20(), mod)
+        embed.description = self._get_roll_string(self.roll_die(), mod)
 
         await ctx.send(embed=embed)
 
-    def roll_die(self, die_size: int):
+    def roll_die(self, die_size: int=20):
         return math.ceil(random.random() * die_size)
 
-    def roll_d20(self):
-        return self.roll_die(20)
+    # starting to understand why one imports d20
+    def roll_xdy(self, dice: str):
+        num_dice, die_size = dice.split("d")
+        num_dice = 1 if not num_dice else int(num_dice)
+        return [self.roll_die(die_size) for i in range(int(num_dice))]
 
     def find_skill_type(self, check_name: str, char_data: dict):
         # check predefined data
@@ -366,11 +369,16 @@ class PathWanderer(commands.Cog):
 
         to_hit, damage_bonus = self._get_weapon_mods(weapon, char_data)
 
-        to_hit_line = f"**To hit**: {self._get_roll_string(self.roll_d20(), to_hit)}"
+        to_hit_roll = self.roll_die()
+        to_hit_line = f"**To hit**: {self._get_roll_string(to_hit_roll, to_hit)}"
 
         die_size = int(weapon['die'].split("d")[1])
-        die_roll = self.roll_die(die_size)
-        damage_line = f"**Damage**: {self._get_roll_string(die_roll, damage_bonus, die_size)}"
+        damage_roll = self.roll_die(die_size)
+        damage_line = f"**Damage**: {self._get_roll_string(damage_roll, damage_bonus, die_size)}"
+
+        if to_hit_roll == 20:
+            to_hit_line += " (**crit**)"
+            damage_line += f" => `{(damage_roll + damage_bonus) * 2}`"
 
         embed = discord.Embed()
         embed.title = f"{name} attacks with {article} {weapon['display']}!"
