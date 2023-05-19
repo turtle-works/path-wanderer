@@ -464,6 +464,16 @@ class PathWanderer(commands.Cog):
         lore_field = "\n".join(lore_lines)
         embed.add_field(name="Lores", value=lore_field, inline=True)
 
+        weapon_lines = []
+        for weapon in char_data['weapons']:
+            to_hit, damage_bonus = self._get_weapon_mods(weapon, char_data)
+            to_hit_op = "-" if to_hit < 0 else "+"
+            damage_op = "-" if damage_bonus < 0 else "+"
+            weapon_lines.append(f"**{weapon['display']}**: {to_hit_op}{to_hit} to hit, " + \
+                f"1{weapon['die']} {damage_op} {damage_bonus} damage")
+        weapon_field = "\n".join(weapon_lines)
+        embed.add_field(name="Weapon Attacks", value=weapon_field, inline=False)
+
         await ctx.send(embed=embed)
 
     def _get_prof_label(self, prof_bonus: int):
