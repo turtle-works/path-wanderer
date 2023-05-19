@@ -337,10 +337,10 @@ class PathWanderer(commands.Cog):
 
         return ability_mod + prof_bonus
 
-    def _get_roll_string(self, die_roll: int, mod: int):
+    def _get_roll_string(self, die_roll: int, mod: int, die_size: int=20):
         op = "-" if mod < 0 else "+"
-        die_display = f"**{die_roll}**" if die_roll in [1, 20] else die_roll
-        return f"1d20 ({die_display}) {op} {mod} = `{die_roll + mod}`"
+        die_display = f"**{die_roll}**" if die_roll in [1, die_size] else die_roll
+        return f"1d{die_size} ({die_display}) {op} {mod} = `{die_roll + mod}`"
 
     @commands.command()
     async def attack(self, ctx, *, weapon_name: str):
@@ -361,21 +361,16 @@ class PathWanderer(commands.Cog):
             await ctx.send(f"Did not find `{weapon_name}` in available weapons.")
             return
 
-        prof_bonus = char_data['proficiencies'][weapon['prof']] + char_data['level']
-
-        to_hit, damage_bonus = self._get_weapon_mods(weapon, char_data)
-
         name = char_data['name']
         article = "an" if weapon['display'][0] in ["a", "e", "i", "o", "u"] else "a"
 
+        to_hit, damage_bonus = self._get_weapon_mods(weapon, char_data)
+
         to_hit_line = f"**To hit**: {self._get_roll_string(self.roll_d20(), to_hit)}"
 
-        # TODO: clean up
         die_size = int(weapon['die'].split("d")[1])
         die_roll = self.roll_die(die_size)
-        die_display = f"**{die_roll}**" if die_roll in [1, die_size] else die_roll
-        op = "-" if damage_bonus < 0 else "+"
-        damage_line = f"**Damage**: 1d{die_size} ({die_display}) {op} {damage_bonus} = `{die_roll + damage_bonus}`"
+        damage_line = f"**Damage**: {self._get_roll_string(die_roll, damage_bonus, die_size)}"
 
         embed = discord.Embed()
         embed.title = f"{name} attacks with {article} {weapon['display']}!"
