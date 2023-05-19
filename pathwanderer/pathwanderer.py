@@ -44,6 +44,17 @@ SKILL_DATA = {
     'wisdom': ("ability", "wis")
 }
 
+# possible allowed options
+FINESSE_WEAPONS = ["Claw Blade", "Dagger", "Dogslicer", "Dueling Sword", "Elven Curve Blade",
+    "Filcher's Fork", "Fist", "Kukri", "Light Mace", "Main-gauche", "Rapier", "Sai",
+    "Sawtooth Saber", "Shears", "Shortsword", "Sickle", "Spiked Chain", "Starknife",
+    "Sword Cane", "Tengu Gale Blade", "Wakizashi", "Whip"]
+PROPULSIVE_WEAPONS = ["Composite Longbow", "Composite Shortbow", "Daikyu", "Halfling Sling Staff",
+    "Sling"]
+RANGED_WEAPONS = ["Blowgun", "Bola", "Bomb", "Composite Longbow", "Composite Shortbow", "Daikyu",
+    "Dart", "Halfling Sling Staff", "Hand Crossbow", "Heavy Crossbow", "Javelin", "Longbow",
+    "Shortbow", "Shuriken", "Sling"]
+
 
 class PathWanderer(commands.Cog):
     """Cog that lets users do simple things for Pathfinder 2e."""
@@ -277,8 +288,11 @@ class PathWanderer(commands.Cog):
 
         await ctx.send(embed=embed)
 
+    def roll_die(self, die_size: int):
+        return math.ceil(random.random() * die_size)
+
     def roll_d20(self):
-        return math.ceil(random.random() * 20)
+        return self.roll_die(20)
 
     def find_skill_type(self, check_name: str, char_data: dict):
         # check predefined data
@@ -349,18 +363,50 @@ class PathWanderer(commands.Cog):
 
         prof_bonus = char_data['proficiencies'][weapon['prof']] + char_data['level']
 
-        # TODO: just using str for now, do weapon properties later
-        mod = self._get_ability_mod(char_data['abilities']['str'])
-
-        to_hit = mod + prof_bonus + weapon['pot']
+        to_hit, damage_bonus = self._get_weapon_mods(weapon, char_data)
 
         name = char_data['name']
         article = "an" if weapon['display'][0] in ["a", "e", "i", "o", "u"] else "a"
 
+        to_hit_line = f"**To hit**: {self._get_roll_string(self.roll_d20(), to_hit)}"
+
+        # TODO: clean up
+        die_size = int(weapon['die'].split("d")[1])
+        die_roll = self.roll_die(die_size)
+        die_display = f"**{die_roll}**" if die_roll in [1, die_size] else die_roll
+        op = "-" if damage_bonus < 0 else "+"
+        damage_line = f"**Damage**: 1d{die_size} ({die_display}) {op} {damage_bonus} = `{die_roll + damage_bonus}`"
+
         embed = discord.Embed()
         embed.title = f"{name} attacks with {article} {weapon['display']}!"
-        embed.description = f"**To hit**: {self._get_roll_string(self.roll_d20(), to_hit)}"
+        embed.description = f"{to_hit_line}\n{damage_line}"
         await ctx.send(embed=embed)
+
+    def _get_weapon_mods(self, weapon: dict, char_data: dict):
+        abilities = char_data['abilities']
+        level = char_data['level']
+        profs = char_data['proficiencies']
+
+		# have to manually do all this stuff
+        if weapon['name'] in FINESSE_WEAPONS:
+            ability_mod = self._get_ability_mod(max(abilities['str'], abilities['dex']))
+        elif weapon['name'] in RANGED_WEAPONS:
+            ability_mod = self._get_ability_mod(abilities['dex'])
+        else:
+            ability_mod = self._get_ability_mod(abilities['str'])
+
+        # TODO: how to establish when a weapon is being thrown?
+        if weapon['name'] in PROPULSIVE_WEAPONS:
+            str_mod = self._get_ability_mod(abilities['str'])
+            damage_bonus = math.floor(str_mod / 2) if str_mod > 0 else str_mod
+        elif weapon['name'] in RANGED_WEAPONS:
+            damage_bonus = 0
+        else:
+            damage_bonus = self._get_ability_mod(abilities['str'])
+
+        prof_bonus = profs[weapon['prof']] + (0 if profs[weapon['prof']] == 0 else level)
+
+        return ability_mod + prof_bonus + weapon['pot'], damage_bonus
 
     @commands.command(aliases=["pfsheet"])
     async def sheet(self, ctx):
