@@ -328,6 +328,40 @@ class PathWanderer(commands.Cog):
         die_display = f"**{die_roll}**" if die_roll in [1, 20] else die_roll
         return f"1d20 ({die_display}) {op} {mod} = `{die_roll + mod}`"
 
+    @commands.command()
+    async def attack(self, ctx, *, weapon_name: str):
+        """Attack with a weapon."""
+        json_id = await self.config.user(ctx.author).active_char()
+        if json_id is None:
+            await ctx.send("Set an active character first with `character setactive`.")
+            return
+
+        data = await self.config.user(ctx.author).characters()
+        char_data = data[json_id]['build']
+
+        weapon = None
+        for weap in char_data['weapons']:
+            if weapon_name.lower() in weap['display'].lower():
+                weapon = weap
+        if weapon is None:
+            await ctx.send(f"Did not find `{weapon_name}` in available weapons.")
+            return
+
+        prof_bonus = char_data['proficiencies'][weapon['prof']] + char_data['level']
+
+        # TODO: just using str for now, do weapon properties later
+        mod = self._get_ability_mod(char_data['abilities']['str'])
+
+        to_hit = mod + prof_bonus + weapon['pot']
+
+        name = char_data['name']
+        article = "an" if weapon['display'][0] in ["a", "e", "i", "o", "u"] else "a"
+
+        embed = discord.Embed()
+        embed.title = f"{name} attacks with {article} {weapon['display']}!"
+        embed.description = f"**To hit**: {self._get_roll_string(self.roll_d20(), to_hit)}"
+        await ctx.send(embed=embed)
+
     @commands.command(aliases=["pfsheet"])
     async def sheet(self, ctx):
         """Show the active character's sheet."""
