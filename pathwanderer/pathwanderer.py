@@ -411,6 +411,70 @@ class PathWanderer(commands.Cog):
 
         return ability_mod + prof_bonus + weapon['pot'], damage_bonus
 
+    @commands.command(aliases=["spells"])
+    async def spellbook(self, ctx):
+        """Show the active character's spells."""
+        json_id = await self.config.user(ctx.author).active_char()
+        if json_id is None:
+            await ctx.send("Set an active character first with `character setactive`.")
+            return
+
+        data = await self.config.user(ctx.author).characters()
+        char_data = data[json_id]['build']
+
+        spell_count = 0
+
+        embed = discord.Embed()
+        embed.title = "Spellbook"
+
+        focus = char_data['focus']
+        # unsure if this will always be a reliable way to determine presence of focus spells
+        if len(focus) > 1 and focus['focusPoints'] > 0:
+            focus_spells = []
+            for tradition in focus.keys():
+                if tradition != 'focusPoints':
+                    for stat in focus[tradition]:
+                        spells = focus[tradition][stat]['focusSpells']
+                        focus_spells.extend(spells)
+                        spell_count += len(spells)
+            focus_field = ", ".join(focus_spells)
+            embed.add_field(name="Focus Spells", value=focus_field, inline=False)
+
+        spellcasting = char_data['spellCasters']
+        if len(spellcasting) > 0:
+            available_spells = {}
+            for source in spellcasting:
+                all_leveled_spells = source['spells']
+                for leveled_spells in all_leveled_spells:
+                    level = leveled_spells['spellLevel']
+                    spells = leveled_spells['list']
+                    if level not in available_spells:
+                        available_spells[level] = spells
+                    else:
+                        available_spells[level].extend(spells)
+                    spell_count += len(spells)
+
+            # one field per level
+            for level in available_spells.keys():
+                spell_field = ", ".join(available_spells[level])
+                field_name = "Cantrip" if level == 0 else f"Level {level}"
+                embed.add_field(name=field_name, value=spell_field, inline=False)
+
+        # TODO: include perDay?
+
+        formula = char_data['formula']
+        if formula:
+            formulae = []
+            for source in formula:
+                formulae.extend(source['known'])
+            formula_field = ", ".join(formulae)
+            embed.add_field(name="Formulae", value=formula_field, inline=False)
+
+        plural = "s" if spell_count != 1 else ""
+        embed.description = f"{char_data['name']} has {spell_count} spell{plural}."
+
+        await ctx.send(embed=embed)
+
     @commands.command(aliases=["pfsheet"])
     async def sheet(self, ctx):
         """Show the active character's sheet."""
