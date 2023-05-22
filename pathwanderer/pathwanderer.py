@@ -45,15 +45,21 @@ SKILL_DATA = {
 }
 
 # possible allowed options
-FINESSE_WEAPONS = ["Claw Blade", "Dagger", "Dogslicer", "Dueling Sword", "Elven Curve Blade",
-    "Filcher's Fork", "Fist", "Kukri", "Light Mace", "Main-gauche", "Rapier", "Sai",
-    "Sawtooth Saber", "Shears", "Shortsword", "Sickle", "Spiked Chain", "Starknife",
-    "Sword Cane", "Tengu Gale Blade", "Wakizashi", "Whip"]
-PROPULSIVE_WEAPONS = ["Composite Longbow", "Composite Shortbow", "Daikyu", "Halfling Sling Staff",
-    "Sling"]
-RANGED_WEAPONS = ["Blowgun", "Bola", "Bomb", "Composite Longbow", "Composite Shortbow", "Daikyu",
-    "Dart", "Halfling Sling Staff", "Hand Crossbow", "Heavy Crossbow", "Javelin", "Longbow",
-    "Shortbow", "Shuriken", "Sling"]
+FINESSE_WEAPONS = ["Bow Staff - Melee", "Butterfly Sword", "Claw Blade", "Combat Lure",
+    "Corset Knife", "Dagger", "Dancer's Spear", "Dogslicer", "Dueling Sword", "Elven Curve Blade",
+    "Feng Huo Lun", "Fighting Fan", "Filcher's Fork", "Fist", "Flyssa", "Karambit", "Kukri",
+    "Light Mace", "Main-gauche", "Rapier", "Sai", "Sawtooth Saber", "Shears", "Shortsword",
+    "Sickle", "Spiked Chain", "Starknife", "Sword Cane", "Tekko-Kagi", "Tengu Gale Blade",
+    "Wakizashi", "War Razor", "Whip", "Whipstaff"]
+PROPULSIVE_WEAPONS = ["Composite Longbow", "Composite Shortbow", "Daikyu", "Gakgung",
+    "Halfling Sling Staff", "Mikazuki - Ranged", "Phalanx Piercer", "Sling", "Spraysling",
+    "Thunder Sling"]
+RANGED_WEAPONS = ["Blowgun", "Bola", "Bomb", "Bow Staff - Ranged", "Composite Longbow",
+    "Composite Shortbow", "Crescent Cross - Ranged", "Crossbow", "Daikyu", "Dart", "Gakgung",
+    "Gauntlet Bow", "Halfling Sling Staff", "Hand Crossbow", "Harpoon", "Heavy Crossbow",
+    "Javelin", "Lancer - Ranged", "Longbow", "Mikazuki - Ranged", "Phalanx Piercer", "Rotary Bow",
+    "Shield Bow", "Shortbow", "Shuriken", "Sling", "Spraysling", "Sukgung", "Thunder Sling",
+    "Wrecker - Ranged"]
 
 
 class PathWanderer(commands.Cog):
