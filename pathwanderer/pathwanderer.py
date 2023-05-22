@@ -71,7 +71,8 @@ class PathWanderer(commands.Cog):
         characters = await self.config.user_from_id(user_id).characters()
         if characters:
             data = f"For user with ID {user_id}, data is stored for characters with " + \
-                "Pathbuilder 2e JSON IDs:\n" + "\n".join([json_id for json_id in characters])
+                "Pathbuilder 2e JSON IDs:\n" + \
+                "\n".join([json_id for json_id in characters.keys()])
         else:
             data = f"No data is stored for user with ID {user_id}.\n"
         return {"user_data.txt": BytesIO(data.encode())}
@@ -160,7 +161,7 @@ class PathWanderer(commands.Cog):
         active_id = await self.config.user(ctx.author).active_char()
 
         lines = []
-        for json_id in characters:
+        for json_id in characters.keys():
             line = f"{characters[json_id]['build']['name']}"
             line += " (**active**)" if json_id == active_id else ""
             lines.append(line)
@@ -202,7 +203,7 @@ class PathWanderer(commands.Cog):
         query = query.lower()
         characters = await self.config.user(ctx.author).characters()
 
-        for json_id in characters:
+        for json_id in characters.keys():
             # either match to json id or partial match to a character name
             if query == json_id or query in characters[json_id]['build']['name'].lower():
                 return json_id
@@ -299,7 +300,7 @@ class PathWanderer(commands.Cog):
 
     def find_skill_type(self, check_name: str, char_data: dict):
         # check predefined data
-        for skill in SKILL_DATA:
+        for skill in SKILL_DATA.keys():
             # note that "int" will always go to intelligence instead of intimidation
             if check_name in skill:
                 return (SKILL_DATA[skill][TYPE], skill)
@@ -433,7 +434,7 @@ class PathWanderer(commands.Cog):
             focus_spells = []
             for tradition in focus.keys():
                 if tradition != 'focusPoints':
-                    for stat in focus[tradition]:
+                    for stat in focus[tradition].keys():
                         spells = focus[tradition][stat]['focusSpells']
                         focus_spells.extend(spells)
                         spell_count += len(spells)
@@ -491,7 +492,7 @@ class PathWanderer(commands.Cog):
         embed.description = f"{char_data['class']} {char_data['level']}"
 
         ability_lines = []
-        for ability in char_data['abilities']:
+        for ability in char_data['abilities'].keys():
             mod = self._get_ability_mod(char_data['abilities'][ability])
             op = "-" if mod < 0 else "+"
             ability_lines.append(f"**{ability.upper()}**: ({op}{mod})")
@@ -501,7 +502,7 @@ class PathWanderer(commands.Cog):
         profs = char_data['proficiencies']
         save_lines = []
         skill_lines = []
-        for skill in SKILL_DATA:
+        for skill in SKILL_DATA.keys():
             if SKILL_DATA[skill][TYPE] == "ability":
                 continue
             prof_label = self._get_prof_label(profs[skill])
