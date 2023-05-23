@@ -2,6 +2,7 @@ import json
 import math
 import random
 import re
+import urllib
 
 import aiohttp
 import discord
@@ -11,6 +12,7 @@ HTTP_ROOT = "https://"
 PATHBUILDER_URL_BASE = "https://pathbuilder2e.com/json.php?id="
 JUST_DIGITS = r"\d+$"
 PATHBUILDER_URL_TEMPLATE = r"https://pathbuilder2e.com/json.php\?id=\d+$"
+AON_SEARCH_BASE = "https://2e.aonprd.com/Search.aspx?q="
 
 # TODO: shouldn't there be a better way to store this somewhere?
 TYPE = 0
@@ -560,3 +562,31 @@ class PathWanderer(commands.Cog):
             label = ""
 
         return label
+
+    @commands.command(aliases=["aon", "aonlookup", "pflookup"])
+    async def lookup(self, ctx, *, query):
+        """Look something up.
+        
+        Gives a link to a search on the Archives of Nethys for the given term.
+        """
+        await ctx.send(self._lmgtfy(f"`{query}`", query))
+
+    @commands.command(aliases=["pfitem"])
+    async def item(self, ctx, *, item_name):
+        """Look up a piece of equipment (sort of)."""
+        await ctx.send(self._lmgtfy("items", item_name))
+
+    @commands.command(aliases=["pfspell"])
+    async def spell(self, ctx, *, spell_name):
+        """Look up a spell (sort of)."""
+        await ctx.send(self._lmgtfy("spells", spell_name))
+
+    @commands.command(aliases=["pfweapon"])
+    async def weapon(self, ctx, *, weapon_name):
+        """Look up a weapon (sort of)."""
+        await ctx.send(self._lmgtfy("weapons", weapon_name))
+
+    def _lmgtfy(self, topic: str, spell_name: str):
+        aon_link = AON_SEARCH_BASE + urllib.parse.quote_plus(spell_name)
+        return f"Unfortunately, I don't have access to data on {topic}. " + \
+            f"I can help you look it up on the Archives of Nethys, though:\n{aon_link}"
