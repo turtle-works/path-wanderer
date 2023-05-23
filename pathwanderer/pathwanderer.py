@@ -498,7 +498,8 @@ class PathWanderer(commands.Cog):
             for source in formula:
                 formulae.extend(source['known'])
             formula_field = ", ".join(formulae)
-            embed.add_field(name="Formulae", value=formula_field, inline=False)
+            formula_field_name = f"Formulae ({len(formulae)})"
+            embed.add_field(name=formula_field_name, value=formula_field, inline=False)
 
         plural = "s" if spell_count != 1 else ""
         embed.description = f"{char_data['name']} has {spell_count} spell{plural}."
