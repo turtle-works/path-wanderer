@@ -262,7 +262,7 @@ class PathWanderer(commands.Cog):
         name = char_data['name']
         article = "an" if skill[0] in ["a", "e", "i", "o", "u"] else "a"
 
-        embed = discord.Embed()
+        embed = self._get_base_embed()
         embed.title = f"{name} makes {article} {lore_indicator}{skill.capitalize()} check!"
         embed.description = self._get_roll_string(self.roll_die(), mod)
 
@@ -293,7 +293,7 @@ class PathWanderer(commands.Cog):
 
         name = char_data['name']
 
-        embed = discord.Embed()
+        embed = self._get_base_embed()
         embed.title = f"{name} makes a {skill.capitalize()} save!"
         embed.description = self._get_roll_string(self.roll_die(), mod)
 
@@ -391,7 +391,7 @@ class PathWanderer(commands.Cog):
             to_hit_line += " (**crit**)"
             damage_line += f" => `{(damage_roll + damage_bonus) * 2}`"
 
-        embed = discord.Embed()
+        embed = self._get_base_embed()
         embed.title = f"{name} attacks with {article} {weapon['display']}!"
         embed.description = f"{to_hit_line}\n{damage_line}"
         await ctx.send(embed=embed)
@@ -435,7 +435,7 @@ class PathWanderer(commands.Cog):
 
         spell_count = 0
 
-        embed = discord.Embed()
+        embed = self._get_base_embed()
         embed.title = "Spellbook"
 
         focus = char_data['focus']
@@ -517,7 +517,7 @@ class PathWanderer(commands.Cog):
         data = await self.config.user(ctx.author).characters()
         char_data = data[json_id]['build']
 
-        embed = discord.Embed()
+        embed = self._get_base_embed()
         embed.title = f"{char_data['name']}"
         embed.description = f"{char_data['class']} {char_data['level']}"
 
@@ -585,6 +585,11 @@ class PathWanderer(commands.Cog):
 
         return label
 
+    def _get_base_embed(self):
+        embed = discord.Embed()
+        embed.colour = discord.Colour(random.randint(0x000000, 0xFFFFFF))
+        return embed
+
     @commands.command(aliases=["aon", "aonlookup", "pflookup"])
     async def lookup(self, ctx, *, query):
         """Look something up.
@@ -608,7 +613,7 @@ class PathWanderer(commands.Cog):
         """Look up a weapon (sort of)."""
         await ctx.send(self._lmgtfy("weapons", weapon_name))
 
-    def _lmgtfy(self, topic: str, spell_name: str):
-        aon_link = AON_SEARCH_BASE + urllib.parse.quote_plus(spell_name)
+    def _lmgtfy(self, topic: str, query: str):
+        aon_link = AON_SEARCH_BASE + urllib.parse.quote_plus(query)
         return f"Unfortunately, I don't have access to data on {topic}. " + \
             f"I can help you look it up on the Archives of Nethys, though:\n{aon_link}"
