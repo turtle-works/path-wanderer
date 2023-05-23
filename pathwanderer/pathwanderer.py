@@ -14,6 +14,8 @@ JUST_DIGITS = r"\d+$"
 PATHBUILDER_URL_TEMPLATE = r"https://pathbuilder2e.com/json.php\?id=\d+$"
 AON_SEARCH_BASE = "https://2e.aonprd.com/Search.aspx?q="
 
+SPELL_SLOT_SYMBOL = "✦"
+
 # TODO: shouldn't there be a better way to store this somewhere?
 TYPE = 0
 ABILITY = 1
@@ -446,13 +448,16 @@ class PathWanderer(commands.Cog):
                         spells = focus[tradition][stat]['focusSpells']
                         focus_spells.extend(spells)
                         spell_count += len(spells)
+            focus_field_name = f"Focus Spells {focus['focusPoints'] * SPELL_SLOT_SYMBOL}"
             focus_field = ", ".join(focus_spells)
-            embed.add_field(name="Focus Spells", value=focus_field, inline=False)
+            embed.add_field(name=focus_field_name, value=focus_field, inline=False)
 
         spellcasting = char_data['spellCasters']
         if len(spellcasting) > 0:
             available_spells = {}
+            available_slots = {}
             for source in spellcasting:
+                # list of spells, per level
                 all_leveled_spells = source['spells']
                 for leveled_spells in all_leveled_spells:
                     level = leveled_spells['spellLevel']
@@ -463,13 +468,29 @@ class PathWanderer(commands.Cog):
                         available_spells[level].extend(spells)
                     spell_count += len(spells)
 
+                # display of spell slots, per level
+                for level in range(1, len(source['perDay'])):
+                    slots = source['perDay'][level]
+                    if source['name'] == char_data['class']:
+                        slot_str = slots * SPELL_SLOT_SYMBOL
+                        if level not in available_slots:
+                            available_slots[level] = [slot_str]
+                        else:
+                            available_slots[level].insert(0, slot_str)
+                    elif slots > 0:
+                        slot_str = f"{source['name']}: {slots * SPELL_SLOT_SYMBOL}"
+                        if level not in available_slots:
+                            available_slots[level] = [slot_str]
+                        else:
+                            available_slots[level].append(slot_str)
+
             # one field per level
             for level in available_spells.keys():
                 spell_field = ", ".join(available_spells[level])
-                field_name = "Cantrip" if level == 0 else f"Level {level}"
+                field_name = "Cantrip" if level == 0 else f"Level {level} "
+                if level > 0:
+                    field_name += " | ".join(available_slots[level])
                 embed.add_field(name=field_name, value=spell_field, inline=False)
-
-        # TODO: include perDay?
 
         formula = char_data['formula']
         if formula:
