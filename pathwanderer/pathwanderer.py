@@ -263,15 +263,14 @@ class PathWanderer(commands.Cog):
             return
 
         # feels a little hacky
-        if len(query_parts) > 1:
-            mod += sum([d20.roll(b).total for b in query_parts[1:]])
+        bonuses = sum([d20.roll(b).total for b in query_parts[1:]])
 
         name = char_data['name']
         article = "an" if skill[0] in ["a", "e", "i", "o", "u"] else "a"
 
         embed = self._get_base_embed()
         embed.title = f"{name} makes {article} {lore_indicator}{skill.capitalize()} check!"
-        embed.description = self._get_roll_string(self.roll_die(), mod)
+        embed.description = str(d20.roll(self._get_dice_string(mod, bonuses)))
 
         await ctx.send(embed=embed)
 
@@ -300,25 +299,15 @@ class PathWanderer(commands.Cog):
 
         mod = self._get_skill_mod(skill, char_data)
 
-        if len(query_parts) > 1:
-            mod += sum([d20.roll(b).total for b in query_parts[1:]])
+        bonuses = sum([d20.roll(b).total for b in query_parts[1:]])
 
         name = char_data['name']
 
         embed = self._get_base_embed()
         embed.title = f"{name} makes a {skill.capitalize()} save!"
-        embed.description = self._get_roll_string(self.roll_die(), mod)
+        embed.description = str(d20.roll(self._get_dice_string(mod, bonuses)))
 
         await ctx.send(embed=embed)
-
-    def roll_die(self, die_size: int=20):
-        return math.ceil(random.random() * die_size)
-
-    # starting to understand why one imports d20
-    def roll_xdy(self, dice: str):
-        num_dice, die_size = dice.split("d")
-        num_dice = 1 if not num_dice else int(num_dice)
-        return [self.roll_die(die_size) for i in range(int(num_dice))]
 
     def find_skill_type(self, check_name: str, char_data: dict):
         # check predefined data
@@ -363,13 +352,15 @@ class PathWanderer(commands.Cog):
 
         return ability_mod + prof_bonus
 
-    def _get_roll_string(self, die_roll: int, mod: int, die_size: int=20):
+    def _get_dice_string(self, mod: int, bonuses: int, die_size: int=20):
         op = "-" if mod < 0 else "+"
-        die_display = f"**{die_roll}**" if die_roll in [1, die_size] else die_roll
-        return f"1d{die_size} ({die_display}) {op} {mod} = `{die_roll + mod}`"
+        bonus_op = "-" if bonuses < 0 else "+"
+        bonus_str = f" {bonus_op} {abs(bonuses)}" if bonuses else ""
+
+        return f"1d{die_size} {op} {abs(mod)}{bonus_str}"
 
     @commands.command()
-    async def attack(self, ctx, *, weapon_name: str):
+    async def attack(self, ctx, *, query: str):
         """Attack with a weapon."""
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
@@ -378,6 +369,10 @@ class PathWanderer(commands.Cog):
 
         data = await self.config.user(ctx.author).characters()
         char_data = data[json_id]['build']
+
+        query_parts = [p.strip() for p in query.split("-b")]
+
+        weapon_name = query_parts[0]
 
         weapon = None
         for weap in char_data['weapons']:
@@ -392,16 +387,19 @@ class PathWanderer(commands.Cog):
 
         to_hit, damage_bonus = self._get_weapon_mods(weapon, char_data)
 
-        to_hit_roll = self.roll_die()
-        to_hit_line = f"**To hit**: {self._get_roll_string(to_hit_roll, to_hit)}"
+        # TODO: uh oh. damage bonuses?
+        to_hit_bonuses = sum([d20.roll(b).total for b in query_parts[1:]])
+
+        to_hit_roll = d20.roll(self._get_dice_string(to_hit, to_hit_bonuses))
+        to_hit_line = f"**To hit**: {str(to_hit_roll)}"
 
         die_size = int(weapon['die'].split("d")[1])
-        damage_roll = self.roll_die(die_size)
-        damage_line = f"**Damage**: {self._get_roll_string(damage_roll, damage_bonus, die_size)}"
+        damage_roll = d20.roll(self._get_dice_string(damage_bonus, bonuses=0, die_size=die_size))
+        damage_line = f"**Damage**: {str(damage_roll)}"
 
-        if to_hit_roll == 20:
+        if to_hit_roll.crit == d20.CritType.CRIT:
             to_hit_line += " (**crit**)"
-            damage_line += f" => `{(damage_roll + damage_bonus) * 2}`"
+            damage_line += f" -> `{(damage_roll.total + damage_bonus) * 2}`"
 
         embed = self._get_base_embed()
         embed.title = f"{name} attacks with {article} {weapon['display']}!"
