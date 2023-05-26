@@ -6,6 +6,7 @@ import urllib
 
 import aiohttp
 import discord
+import d20
 from redbot.core import Config, commands
 
 HTTP_ROOT = "https://"
@@ -221,7 +222,7 @@ class PathWanderer(commands.Cog):
         return None
 
     @commands.command(aliases=["c", "pfc", "pfcheck"])
-    async def check(self, ctx, *, check_name: str):
+    async def check(self, ctx, *, query: str):
         """Make a skill check as the active character."""
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
@@ -231,7 +232,9 @@ class PathWanderer(commands.Cog):
         data = await self.config.user(ctx.author).characters()
         char_data = data[json_id]['build']
 
-        check_name = check_name.lower()
+        query_parts = [p.strip() for p in query.split("-b")]
+
+        check_name = query_parts[0].lower()
 
         if check_name in "lore":
             await ctx.send("Please use a specific lore skill. Your options are: " + \
@@ -259,6 +262,10 @@ class PathWanderer(commands.Cog):
             await ctx.send(f"Could not understand `{check_name}`.")
             return
 
+        # feels a little hacky
+        if len(query_parts) > 1:
+            mod += sum([d20.roll(b).total for b in query_parts[1:]])
+
         name = char_data['name']
         article = "an" if skill[0] in ["a", "e", "i", "o", "u"] else "a"
 
@@ -269,7 +276,7 @@ class PathWanderer(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(aliases=["s", "pfs", "pfsave"])
-    async def save(self, ctx, *, save_name: str):
+    async def save(self, ctx, *, query: str):
         """Make a saving throw as the active character."""
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
@@ -279,7 +286,9 @@ class PathWanderer(commands.Cog):
         data = await self.config.user(ctx.author).characters()
         char_data = data[json_id]['build']
 
-        save_name = save_name.lower()
+        query_parts = [p.strip() for p in query.split("-b")]
+
+        save_name = query_parts[0].lower()
 
         skill_type, skill = self.find_skill_type(save_name, char_data)
         if not skill_type:
@@ -290,6 +299,9 @@ class PathWanderer(commands.Cog):
             return
 
         mod = self._get_skill_mod(skill, char_data)
+
+        if len(query_parts) > 1:
+            mod += sum([d20.roll(b).total for b in query_parts[1:]])
 
         name = char_data['name']
 
