@@ -353,13 +353,16 @@ class PathWanderer(commands.Cog):
         return ability_mod + prof_bonus
 
     def _get_dice_string(self, mod: int, bonuses: int, die_size: int=20):
-        op = "-" if mod < 0 else "+"
-        bonus_op = "-" if bonuses < 0 else "+"
+        op = self._get_op(mod)
+        bonus_op = self._get_op(bonuses)
         bonus_str = f" {bonus_op} {abs(bonuses)}" if bonuses else ""
 
         return f"1d{die_size} {op} {abs(mod)}{bonus_str}"
 
-    @commands.command()
+    def _get_op(self, value: int):
+        return "-" if value < 0 else "+"
+
+    @commands.command(aliases=["a", "pfattack"])
     async def attack(self, ctx, *, query: str):
         """Attack with a weapon."""
         json_id = await self.config.user(ctx.author).active_char()
@@ -432,7 +435,7 @@ class PathWanderer(commands.Cog):
 
         return ability_mod + prof_bonus + weapon['pot'], damage_bonus
 
-    @commands.command(aliases=["spells"])
+    @commands.command(aliases=["pfspellbook", "pfspells", "spells"])
     async def spellbook(self, ctx):
         """Show the active character's spells."""
         json_id = await self.config.user(ctx.author).active_char()
@@ -534,7 +537,7 @@ class PathWanderer(commands.Cog):
         ability_lines = []
         for ability in char_data['abilities'].keys():
             mod = self._get_ability_mod(char_data['abilities'][ability])
-            op = "-" if mod < 0 else "+"
+            op = self._get_op(mod)
             ability_lines.append(f"**{ability.upper()}**: ({op}{mod})")
         abilities_field = " ".join(ability_lines[:3]) + "\n" + " ".join(ability_lines[3:])
         embed.add_field(name="Ability Scores", value=abilities_field, inline=False)
@@ -547,7 +550,7 @@ class PathWanderer(commands.Cog):
                 continue
             prof_label = self._get_prof_label(profs[skill])
             mod = self._get_skill_mod(skill, char_data)
-            op = "-" if mod < 0 else "+"
+            op = self._get_op(mod)
 
             line = f"{prof_label}{skill.capitalize()}: ({op}{mod})"
             if SKILL_DATA[skill][TYPE] == "save":
@@ -564,7 +567,7 @@ class PathWanderer(commands.Cog):
         for skill in char_data['lores']:
             prof_label = self._get_prof_label(skill[1])
             mod = self._get_lore_mod(skill[0].lower(), char_data)
-            op = "-" if mod < 0 else "+"
+            op = self._get_op(mod)
             lore_lines.append(f"{prof_label}{skill[0].capitalize()}: ({op}{mod})")
         lore_field = "\n".join(lore_lines)
         embed.add_field(name="Lores", value=lore_field, inline=True)
@@ -572,8 +575,8 @@ class PathWanderer(commands.Cog):
         weapon_lines = []
         for weapon in char_data['weapons']:
             to_hit, damage_bonus = self._get_weapon_mods(weapon, char_data)
-            to_hit_op = "-" if to_hit < 0 else "+"
-            damage_op = "-" if damage_bonus < 0 else "+"
+            to_hit_op = self._get_op(to_hit)
+            damage_op = self._get_op(damage_bonus)
             weapon_lines.append(f"**{weapon['display']}**: {to_hit_op}{to_hit} to hit, " + \
                 f"1{weapon['die']} {damage_op} {damage_bonus} damage")
         weapon_field = "\n".join(weapon_lines)
