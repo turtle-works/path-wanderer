@@ -199,6 +199,32 @@ class PathWanderer(commands.Cog):
         await self.config.user(ctx.author).active_char.set(character_id)
         await ctx.send(f"{characters[character_id]['build']['name']} made active.")
 
+    @character.command(name="setcolor")
+    async def character_color(self, ctx, *, color: str):
+        """Set the active character's embed color.
+
+        Takes either a hex code or "random". Examples:
+        `[p]character setcolor #FF8822`
+        `[p]character setcolor random`
+        """
+        json_id = await self.config.user(ctx.author).active_char()
+        if json_id is None:
+            await ctx.send("Set an active character first with `character setactive`.")
+            return
+
+        if re.match(r"^#?[0-9a-fA-F]{6}$", color) or color.lower() == "random":
+            async with self.config.user(ctx.author).csettings() as csettings:
+                if json_id not in csettings:
+                    csettings[json_id] = {}
+
+                if color.lower() == "random":
+                    csettings[json_id]['color'] = None
+                else:
+                    csettings[json_id]['color'] = int(color.lstrip("#"), 16)
+            await ctx.send("Embed color has been set.")
+        else:
+            await ctx.send(f"Could not interpret `{color}` as a color.")
+
     @character.command(name="remove", aliases=["delete"])
     async def character_remove(self, ctx, *, query: str):
         """Remove a character from the list."""
@@ -279,7 +305,7 @@ class PathWanderer(commands.Cog):
         name = char_data['name']
         article = "an" if skill[0] in ["a", "e", "i", "o", "u"] else "a"
 
-        embed = self._get_base_embed()
+        embed = await self._get_base_embed(ctx)
         embed.title = f"{name} makes {article} {lore_indicator}{skill.capitalize()} check!"
         embed.description = str(d20.roll(self.make_dice_string(mod, bonuses)))
 
@@ -314,7 +340,7 @@ class PathWanderer(commands.Cog):
 
         name = char_data['name']
 
-        embed = self._get_base_embed()
+        embed = await self._get_base_embed(ctx)
         embed.title = f"{name} makes a {skill.capitalize()} save!"
         embed.description = str(d20.roll(self.make_dice_string(mod, bonuses)))
 
@@ -442,7 +468,7 @@ class PathWanderer(commands.Cog):
         # TODO: uh oh. damage bonuses?
         to_hit_bonus = sum([d20.roll(b).total for b in query_parts[1:]])
 
-        embed = self._get_base_embed()
+        embed = await self._get_base_embed(ctx)
         embed.title = f"{name} attacks with {article} {weapon['display']}!"
 
         if num_attacks <= 1:
@@ -513,7 +539,7 @@ class PathWanderer(commands.Cog):
 
             csettings[json_id]['consecutive_attacks'] += 1
 
-            embed = self._get_base_embed()
+            embed = await self._get_base_embed(ctx)
             embed.title = f"{name} attacks again with {article} {weapon['display']}!"
             embed.description = output
 
@@ -571,7 +597,7 @@ class PathWanderer(commands.Cog):
 
         spell_count = 0
 
-        embed = self._get_base_embed()
+        embed = await self._get_base_embed(ctx)
         embed.title = "Spellbook"
 
         focus = char_data['focus']
@@ -653,7 +679,7 @@ class PathWanderer(commands.Cog):
         data = await self.config.user(ctx.author).characters()
         char_data = data[json_id]['build']
 
-        embed = self._get_base_embed()
+        embed = await self._get_base_embed(ctx)
         embed.title = f"{char_data['name']}"
         embed.description = f"{char_data['class']} {char_data['level']}"
 
@@ -721,9 +747,16 @@ class PathWanderer(commands.Cog):
 
         return label
 
-    def _get_base_embed(self):
+    async def _get_base_embed(self, ctx):
         embed = discord.Embed()
-        embed.colour = discord.Colour(random.randint(0x000000, 0xFFFFFF))
+        json_id = await self.config.user(ctx.author).active_char()
+        settings = await self.config.user(ctx.author).csettings()
+
+        if json_id in settings and 'color' in settings[json_id] and settings[json_id]['color']:
+            embed.colour = discord.Colour(settings[json_id]['color'])
+        else:
+            embed.colour = discord.Colour(random.randint(0x000000, 0xFFFFFF))
+
         return embed
 
     @commands.command(aliases=["aon", "aonlookup", "pflookup"])
