@@ -720,6 +720,11 @@ class PathWanderer(commands.Cog):
         """
         await ctx.send(self._lmgtfy(f"`{query}`", query))
 
+    @commands.command(aliases=['pffeat'])
+    async def feat(self, ctx, *, feat_name):
+        """Look up a feat (sort of)."""
+        await ctx.send(self._lmgtfy("feats", feat_name))
+
     @commands.command(aliases=["pfitem"])
     async def item(self, ctx, *, item_name):
         """Look up a piece of equipment (sort of)."""
