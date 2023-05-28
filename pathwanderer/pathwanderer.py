@@ -373,6 +373,25 @@ class PathWanderer(commands.Cog):
         data = await self.config.user(ctx.author).characters()
         char_data = data[json_id]['build']
 
+        await self._attack(ctx, char_data, 1, query)
+
+    @commands.command(aliases=["ma"])
+    async def multiattack(self, ctx, num_attacks: int, *, query: str):
+        """Attack multiple times with a weapon."""
+        json_id = await self.config.user(ctx.author).active_char()
+        if json_id is None:
+            await ctx.send("Set an active character first with `character setactive`.")
+            return
+
+        data = await self.config.user(ctx.author).characters()
+        char_data = data[json_id]['build']
+
+        # 18 chosen over 20 due to being a multiple of 3 (for inline field display)
+        num_attacks = min(num_attacks, 18)
+
+        await self._attack(ctx, char_data, num_attacks, query)
+
+    async def _attack(self, ctx, char_data: dict, num_attacks: int, query: str):
         query_parts = [p.strip() for p in query.split("-b")]
 
         weapon_name = query_parts[0]
@@ -394,11 +413,28 @@ class PathWanderer(commands.Cog):
         # TODO: uh oh. damage bonuses?
         to_hit_bonus = sum([d20.roll(b).total for b in query_parts[1:]])
 
-        output, _, _ = self.make_attack_block(to_hit, damage_mod, to_hit_bonus, die_size)
-
         embed = self._get_base_embed()
         embed.title = f"{name} attacks with {article} {weapon['display']}!"
-        embed.description = output
+
+        if num_attacks <= 1:
+            output, _, _ = self.make_attack_block(to_hit, damage_mod, to_hit_bonus, die_size)
+
+            embed.description = output
+        else:
+            total_damage = 0
+            for i in range(num_attacks):
+                # TODO: agile weapons
+                penalty = 10 if i > 1 else 5 if i > 0 else 0
+                output, attack_roll, damage_roll = self.make_attack_block(to_hit - penalty,
+                    damage_mod, to_hit_bonus, die_size)
+                if attack_roll.crit == d20.CritType.CRIT:
+                    total_damage += (damage_roll.total + damage_mod) * 2
+                else:
+                    total_damage += damage_roll.total + damage_mod
+                embed.add_field(name=f"Attack {i + 1}", value=output)
+
+            embed.description = f"Total damage: `{total_damage}`"
+
         await ctx.send(embed=embed)
 
     def _get_weapon_mods(self, weapon: dict, char_data: dict):
@@ -428,17 +464,17 @@ class PathWanderer(commands.Cog):
         return ability_mod + prof_bonus + weapon['pot'], damage_mod
 
     def make_attack_block(self, to_hit: int, damage_mod: int, to_hit_bonus: int, die_size: int):
-        to_hit_roll = d20.roll(self.make_dice_string(to_hit, to_hit_bonus))
-        to_hit_line = f"**To hit**: {str(to_hit_roll)}"
+        attack_roll = d20.roll(self.make_dice_string(to_hit, to_hit_bonus))
+        attack_line = f"**To hit**: {str(attack_roll)}"
 
         damage_roll = d20.roll(self.make_dice_string(damage_mod, bonuses=0, die_size=die_size))
         damage_line = f"**Damage**: {str(damage_roll)}"
 
-        if to_hit_roll.crit == d20.CritType.CRIT:
-            to_hit_line += " (**crit**)"
+        if attack_roll.crit == d20.CritType.CRIT:
+            attack_line += " (**crit**)"
             damage_line += f" -> `{(damage_roll.total + damage_mod) * 2}`"
 
-        return f"{to_hit_line}\n{damage_line}", to_hit_roll, damage_roll
+        return f"{attack_line}\n{damage_line}", attack_roll, damage_roll
 
     @commands.command(aliases=["pfspellbook", "pfspells", "spells"])
     async def spellbook(self, ctx):
