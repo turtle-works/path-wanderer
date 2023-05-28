@@ -375,7 +375,12 @@ class PathWanderer(commands.Cog):
 
     @commands.command(aliases=["a", "pfa", "pfattack"])
     async def attack(self, ctx, *, query: str):
-        """Attack with a weapon."""
+        """Attack with a weapon.
+        
+        To-hit bonuses can be added with the -b flag. Examples:
+        `[p]attack dagger -b 1`
+        `[p]attack staff -b -1`
+        """
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
             await ctx.send("Set an active character first with `character setactive`.")
@@ -388,7 +393,13 @@ class PathWanderer(commands.Cog):
 
     @commands.command(aliases=["ma"])
     async def multiattack(self, ctx, num_attacks: int, *, query: str):
-        """Attack multiple times with a weapon."""
+        """Attack multiple times with a weapon.
+        
+        Multiple attack penalty will apply.
+        To-hit bonuses, which will apply to all attacks, can be added with the -b flag. Examples:
+        `[p]multiattack 3 shortsword -b 1`
+        `[p]multiattack 2 sling -b +1-1+1`
+        """
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
             await ctx.send("Set an active character first with `character setactive`.")
@@ -460,6 +471,9 @@ class PathWanderer(commands.Cog):
         """Make another attack with the most recently used weapon.
 
         Repeated attacks are assumed to be part of the same turn; multiple attack penalty applies.
+        To-hit bonuses can be added with the -b flag. Examples:
+        `[p]repeatattack`
+        `[p]repeatattack -b 1`
         """
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
