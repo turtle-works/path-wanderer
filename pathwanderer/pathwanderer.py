@@ -270,7 +270,7 @@ class PathWanderer(commands.Cog):
 
         embed = self._get_base_embed()
         embed.title = f"{name} makes {article} {lore_indicator}{skill.capitalize()} check!"
-        embed.description = str(d20.roll(self._get_dice_string(mod, bonuses)))
+        embed.description = str(d20.roll(self.make_dice_string(mod, bonuses)))
 
         await ctx.send(embed=embed)
 
@@ -305,7 +305,7 @@ class PathWanderer(commands.Cog):
 
         embed = self._get_base_embed()
         embed.title = f"{name} makes a {skill.capitalize()} save!"
-        embed.description = str(d20.roll(self._get_dice_string(mod, bonuses)))
+        embed.description = str(d20.roll(self.make_dice_string(mod, bonuses)))
 
         await ctx.send(embed=embed)
 
@@ -352,7 +352,7 @@ class PathWanderer(commands.Cog):
 
         return ability_mod + prof_bonus
 
-    def _get_dice_string(self, mod: int, bonuses: int, die_size: int=20):
+    def make_dice_string(self, mod: int, bonuses: int, die_size: int=20):
         op = self._get_op(mod)
         bonus_op = self._get_op(bonuses)
         bonus_str = f" {bonus_op} {abs(bonuses)}" if bonuses else ""
@@ -388,25 +388,17 @@ class PathWanderer(commands.Cog):
         name = char_data['name']
         article = "an" if weapon['display'][0] in ["a", "e", "i", "o", "u"] else "a"
 
-        to_hit, damage_bonus = self._get_weapon_mods(weapon, char_data)
+        to_hit, damage_mod = self._get_weapon_mods(weapon, char_data)
+        die_size = int(weapon['die'].split("d")[1])
 
         # TODO: uh oh. damage bonuses?
-        to_hit_bonuses = sum([d20.roll(b).total for b in query_parts[1:]])
+        to_hit_bonus = sum([d20.roll(b).total for b in query_parts[1:]])
 
-        to_hit_roll = d20.roll(self._get_dice_string(to_hit, to_hit_bonuses))
-        to_hit_line = f"**To hit**: {str(to_hit_roll)}"
-
-        die_size = int(weapon['die'].split("d")[1])
-        damage_roll = d20.roll(self._get_dice_string(damage_bonus, bonuses=0, die_size=die_size))
-        damage_line = f"**Damage**: {str(damage_roll)}"
-
-        if to_hit_roll.crit == d20.CritType.CRIT:
-            to_hit_line += " (**crit**)"
-            damage_line += f" -> `{(damage_roll.total + damage_bonus) * 2}`"
+        output, _, _ = self.make_attack_block(to_hit, damage_mod, to_hit_bonus, die_size)
 
         embed = self._get_base_embed()
         embed.title = f"{name} attacks with {article} {weapon['display']}!"
-        embed.description = f"{to_hit_line}\n{damage_line}"
+        embed.description = output
         await ctx.send(embed=embed)
 
     def _get_weapon_mods(self, weapon: dict, char_data: dict):
@@ -425,15 +417,28 @@ class PathWanderer(commands.Cog):
         # TODO: how to establish when a weapon is being thrown?
         if weapon['name'] in PROPULSIVE_WEAPONS:
             str_mod = self._get_ability_mod(abilities['str'])
-            damage_bonus = math.floor(str_mod / 2) if str_mod > 0 else str_mod
+            damage_mod = math.floor(str_mod / 2) if str_mod > 0 else str_mod
         elif weapon['name'] in RANGED_WEAPONS:
-            damage_bonus = 0
+            damage_mod = 0
         else:
-            damage_bonus = self._get_ability_mod(abilities['str'])
+            damage_mod = self._get_ability_mod(abilities['str'])
 
         prof_bonus = profs[weapon['prof']] + (0 if profs[weapon['prof']] == 0 else level)
 
-        return ability_mod + prof_bonus + weapon['pot'], damage_bonus
+        return ability_mod + prof_bonus + weapon['pot'], damage_mod
+
+    def make_attack_block(self, to_hit: int, damage_mod: int, to_hit_bonus: int, die_size: int):
+        to_hit_roll = d20.roll(self.make_dice_string(to_hit, to_hit_bonus))
+        to_hit_line = f"**To hit**: {str(to_hit_roll)}"
+
+        damage_roll = d20.roll(self.make_dice_string(damage_mod, bonuses=0, die_size=die_size))
+        damage_line = f"**Damage**: {str(damage_roll)}"
+
+        if to_hit_roll.crit == d20.CritType.CRIT:
+            to_hit_line += " (**crit**)"
+            damage_line += f" -> `{(damage_roll.total + damage_mod) * 2}`"
+
+        return f"{to_hit_line}\n{damage_line}", to_hit_roll, damage_roll
 
     @commands.command(aliases=["pfspellbook", "pfspells", "spells"])
     async def spellbook(self, ctx):
@@ -574,11 +579,11 @@ class PathWanderer(commands.Cog):
 
         weapon_lines = []
         for weapon in char_data['weapons']:
-            to_hit, damage_bonus = self._get_weapon_mods(weapon, char_data)
+            to_hit, damage_mod = self._get_weapon_mods(weapon, char_data)
             to_hit_op = self._get_op(to_hit)
-            damage_op = self._get_op(damage_bonus)
+            damage_op = self._get_op(damage_mod)
             weapon_lines.append(f"**{weapon['display']}**: {to_hit_op}{to_hit} to hit, " + \
-                f"1{weapon['die']} {damage_op} {damage_bonus} damage")
+                f"1{weapon['die']} {damage_op} {damage_mod} damage")
         weapon_field = "\n".join(weapon_lines)
         embed.add_field(name="Weapon Attacks", value=weapon_field, inline=False)
 
