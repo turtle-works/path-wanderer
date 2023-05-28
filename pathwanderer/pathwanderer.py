@@ -50,6 +50,12 @@ SKILL_DATA = {
 }
 
 # possible allowed options
+AGILE_WEAPONS = ["Blowgun", "Butterfly Sword", "Clan Dagger", "Claw Blade", "Corset Knife",
+    "Dagger", "Dart", "Dogslicer", "Feng Huo Lun", "Fighting Fan", "Filcher's Fork", "Fist",
+    "Flyssa", "Gauntlet", "Hatchet", "Kama", "Katar", "Kukri", "Light Hammer", "Light Mace",
+    "Light Pick", "Main-gauche", "Orc Knuckle Dagger", "Sai", "Sap", "Sawtooth Saber",
+    "Shortsword", "Shuriken", "Sickle", "Spiked Gauntlet", "Starknife", "Sword Cane", "Tekko-Kagi",
+    "Tengu Gale Blade", "Thunder Sling", "Wakizashi", "War Razor", "Whipstaff"]
 FINESSE_WEAPONS = ["Bow Staff - Melee", "Butterfly Sword", "Claw Blade", "Combat Lure",
     "Corset Knife", "Dagger", "Dancer's Spear", "Dogslicer", "Dueling Sword", "Elven Curve Blade",
     "Feng Huo Lun", "Fighting Fan", "Filcher's Fork", "Fist", "Flyssa", "Karambit", "Kukri",
@@ -423,8 +429,8 @@ class PathWanderer(commands.Cog):
         else:
             total_damage = 0
             for i in range(num_attacks):
-                # TODO: agile weapons
-                penalty = 10 if i > 1 else 5 if i > 0 else 0
+                penalty = 4 if weapon['name'] in AGILE_WEAPONS else 5
+                penalty = penalty * 2 if i > 1 else penalty if i > 0 else 0
                 output, attack_roll, damage_roll = self.make_attack_block(to_hit - penalty,
                     damage_mod, to_hit_bonus, die_size)
                 if attack_roll.crit == d20.CritType.CRIT:
