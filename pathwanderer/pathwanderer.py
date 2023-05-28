@@ -81,7 +81,7 @@ class PathWanderer(commands.Cog):
         self.bot = bot
 
         self.config = Config.get_conf(self, identifier=34263737)
-        self.config.register_user(active_char=None, characters={}, preferences={})
+        self.config.register_user(active_char=None, characters={}, csettings={}, preferences={})
 
     async def red_get_data_for_user(self, *, user_id):
         """Get a user's personal data."""
@@ -211,6 +211,11 @@ class PathWanderer(commands.Cog):
 
             name = characters[character_id]['build']['name']
             characters.pop(character_id)
+
+            async with self.config.user(ctx.author).csettings() as csettings:
+                if character_id in csettings:
+                    csettings.pop(character_id)
+
             if await self.config.user(ctx.author).active_char() == character_id:
                 await self.config.user(ctx.author).active_char.set(None)
 
@@ -368,7 +373,7 @@ class PathWanderer(commands.Cog):
     def _get_op(self, value: int):
         return "-" if value < 0 else "+"
 
-    @commands.command(aliases=["a", "pfattack"])
+    @commands.command(aliases=["a", "pfa", "pfattack"])
     async def attack(self, ctx, *, query: str):
         """Attack with a weapon."""
         json_id = await self.config.user(ctx.author).active_char()
@@ -409,6 +414,12 @@ class PathWanderer(commands.Cog):
         if weapon is None:
             await ctx.send(f"Did not find `{weapon_name}` in available weapons.")
             return
+
+        async with self.config.user(ctx.author).csettings() as csettings:
+            json_id = await self.config.user(ctx.author).active_char()
+            if json_id not in csettings:
+                csettings[json_id] = {}
+            csettings[json_id]['last_weapon'] = weapon
 
         name = char_data['name']
         article = "an" if weapon['display'][0] in ["a", "e", "i", "o", "u"] else "a"
