@@ -420,6 +420,7 @@ class PathWanderer(commands.Cog):
             if json_id not in csettings:
                 csettings[json_id] = {}
             csettings[json_id]['last_weapon'] = weapon
+            csettings[json_id]['consecutive_attacks'] = max(1, num_attacks)
 
         name = char_data['name']
         article = "an" if weapon['display'][0] in ["a", "e", "i", "o", "u"] else "a"
@@ -453,6 +454,56 @@ class PathWanderer(commands.Cog):
             embed.description = f"Total damage: `{total_damage}`"
 
         await ctx.send(embed=embed)
+
+    @commands.command(aliases=["attack2", "attack3", "ra", "repattack"])
+    async def repeatattack(self, ctx, *, bonus_str=""):
+        """Make another attack with the most recently used weapon.
+
+        Repeated attacks are assumed to be part of the same turn; multiple attack penalty applies.
+        """
+        json_id = await self.config.user(ctx.author).active_char()
+        if json_id is None:
+            await ctx.send("Set an active character first with `character setactive`.")
+            return
+
+        data = await self.config.user(ctx.author).characters()
+        char_data = data[json_id]['build']
+
+        async with self.config.user(ctx.author).csettings() as csettings:
+            if json_id not in csettings:
+                csettings[json_id] = {}
+            if 'consecutive_attacks' not in csettings[json_id]:
+                csettings[json_id]['consecutive_attacks'] = 1
+            if 'last_weapon' not in csettings[json_id]:
+                await ctx.send("Unable to repeat attack; you haven't made any. " + \
+                    "Use `attack` or `multiattack` instead.")
+                return
+
+            weapon = csettings[json_id]['last_weapon']
+            num_attacks = csettings[json_id]['consecutive_attacks']
+
+            bonuses = [b.strip() for b in bonus_str.split("-b")]
+
+            name = char_data['name']
+            article = "an" if weapon['display'][0] in ["a", "e", "i", "o", "u"] else "a"
+
+            to_hit, damage_mod = self._get_weapon_mods(weapon, char_data)
+            die_size = int(weapon['die'].split("d")[1])
+
+            to_hit_bonus = sum([d20.roll(b).total for b in bonuses[1:]])
+
+            penalty = 4 if weapon['name'] in AGILE_WEAPONS else 5
+            penalty = penalty * 2 if num_attacks > 1 else penalty if num_attacks > 0 else 0
+            output, _, _ = self.make_attack_block(to_hit - penalty, damage_mod, to_hit_bonus,
+                die_size)
+
+            csettings[json_id]['consecutive_attacks'] += 1
+
+            embed = self._get_base_embed()
+            embed.title = f"{name} attacks again with {article} {weapon['display']}!"
+            embed.description = output
+
+            await ctx.send(embed=embed)
 
     def _get_weapon_mods(self, weapon: dict, char_data: dict):
         abilities = char_data['abilities']
