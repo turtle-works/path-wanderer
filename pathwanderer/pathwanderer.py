@@ -221,7 +221,9 @@ class PathWanderer(commands.Cog):
                     csettings[json_id]['color'] = None
                 else:
                     csettings[json_id]['color'] = int(color.lstrip("#"), 16)
-            await ctx.send("Embed color has been set.")
+            embed = await self._get_base_embed(ctx)
+            embed.description = "Embed color has been set."
+            await ctx.send(embed=embed)
         else:
             await ctx.send(f"Could not interpret `{color}` as a color.")
 
