@@ -793,3 +793,72 @@ class PathWanderer(commands.Cog):
         aon_link = AON_SEARCH_BASE + urllib.parse.quote_plus(query)
         return f"Unfortunately, I don't have access to data on {topic}. " + \
             f"I can help you look it up on the Archives of Nethys, though:\n{aon_link}"
+
+    @commands.command()
+    async def research(self, ctx, days: int, dc: int, *, query: str):
+        """Spend downtime doing research.
+        
+        Bonuses can be added with the -b flag. Examples:
+        `[p]research 2 23 arcana`
+        `[p]research 1 18 diplomacy -b 2`
+        """
+        json_id = await self.config.user(ctx.author).active_char()
+        if json_id is None:
+            await ctx.send("Set an active character first with `character setactive`.")
+            return
+
+        data = await self.config.user(ctx.author).characters()
+        char_data = data[json_id]['build']
+
+        days = min(days, 24)
+
+        query_parts = [p.strip() for p in query.split("-b")]
+
+        check_name = query_parts[0].lower()
+
+        skill_type, skill = self.find_skill_type(check_name, char_data)
+        if not skill_type:
+            await ctx.send(f"Could not interpret `{check_name}` as a check.")
+            return
+
+        if skill_type == "check" or skill_type == "save":
+            mod = self._get_skill_mod(skill, char_data)
+        elif skill_type == "ability":
+            mod = self._get_ability_mod(char_data['abilities'][SKILL_DATA[skill][ABILITY]])
+        elif skill_type == "lore":
+            mod = self._get_lore_mod(skill, char_data)
+        else:
+            await ctx.send(f"Could not understand `{check_name}`.")
+            return
+
+        bonuses = sum([d20.roll(b).total for b in query_parts[1:]])
+
+        name = char_data['name']
+        article = "an" if skill[0] in ["a", "e", "i", "o", "u"] else "a"
+
+        embed = await self._get_base_embed(ctx)
+        embed.title = f"{name} does some research!"
+
+        total_rp = 0
+        for i in range(days):
+            research_roll = d20.roll(self.make_dice_string(mod, bonuses))
+            if research_roll.total >= dc + 10:
+                rp = 2
+            elif research_roll.total >= dc:
+                rp = 1
+            elif research_roll.total > dc - 10:
+                rp = 0
+            else:
+                rp = -1
+
+            if research_roll.crit == d20.CritType.CRIT:
+                rp = min(2, rp + 1)
+            elif research_roll.crit == d20.CritType.FAIL:
+                rp = max(-1, rp - 1)
+            total_rp += rp
+            embed.add_field(name=f"Day {i + 1}: {rp} RP", value=str(research_roll))
+
+        embed.description = f"DC {dc} {skill.capitalize()}\n" + \
+            f"Total RP from this session: **{total_rp}**"
+
+        await ctx.send(embed=embed)
