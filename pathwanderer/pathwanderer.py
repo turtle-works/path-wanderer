@@ -305,7 +305,7 @@ class PathWanderer(commands.Cog):
         bonuses = sum([d20.roll(b).total for b in query_parts[1:]])
 
         name = char_data['name']
-        article = "an" if skill[0] in ["a", "e", "i", "o", "u"] else "a"
+        article = "an" if skill[0] in ["a", "e", "i", "o", "u"] and not lore_indicator else "a"
 
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name} makes {article} {lore_indicator}{skill.capitalize()} check!"
