@@ -839,26 +839,26 @@ class PathWanderer(commands.Cog):
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name} does some research!"
 
-        total_rp = 0
+        total_kp = 0
         for i in range(days):
             research_roll = d20.roll(self.make_dice_string(mod, bonuses))
             if research_roll.total >= dc + 10:
-                rp = 2
+                kp = 2
             elif research_roll.total >= dc:
-                rp = 1
+                kp = 1
             elif research_roll.total > dc - 10:
-                rp = 0
+                kp = 0
             else:
-                rp = -1
+                kp = -1
 
             if research_roll.crit == d20.CritType.CRIT:
-                rp = min(2, rp + 1)
+                kp = min(2, kp + 1)
             elif research_roll.crit == d20.CritType.FAIL:
-                rp = max(-1, rp - 1)
-            total_rp += rp
-            embed.add_field(name=f"Day {i + 1}: {rp} RP", value=str(research_roll))
+                kp = max(-1, kp - 1)
+            total_kp += kp
+            embed.add_field(name=f"DTP {i + 1}: {kp} KP", value=str(research_roll))
 
         embed.description = f"DC {dc} {skill.capitalize()}\n" + \
-            f"Total RP from this session: **{total_rp}**"
+            f"Total KP from this session: **{total_kp}**"
 
         await ctx.send(embed=embed)
