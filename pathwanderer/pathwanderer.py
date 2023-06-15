@@ -574,7 +574,7 @@ class PathWanderer(commands.Cog):
 
         prof_bonus = profs[weapon['prof']] + (0 if profs[weapon['prof']] == 0 else level)
 
-        return ability_mod + prof_bonus + weapon['pot'], damage_mod
+        return ability_mod + prof_bonus + weapon['pot'], damage_mod + weapon['damageBonus']
 
     def _get_num_damage_dice(self, striking_rune: str):
         if striking_rune == "majorStriking":
