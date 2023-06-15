@@ -391,12 +391,12 @@ class PathWanderer(commands.Cog):
 
         return ability_mod + prof_bonus
 
-    def make_dice_string(self, mod: int, bonuses: int, die_size: int=20):
+    def make_dice_string(self, mod: int, bonuses: int, num_dice: int=1, die_size: int=20):
         op = self._get_op(mod)
         bonus_op = self._get_op(bonuses)
         bonus_str = f" {bonus_op} {abs(bonuses)}" if bonuses else ""
 
-        return f"1d{die_size} {op} {abs(mod)}{bonus_str}"
+        return f"{num_dice}d{die_size} {op} {abs(mod)}{bonus_str}"
 
     def _get_op(self, value: int):
         return "-" if value < 0 else "+"
@@ -465,6 +465,7 @@ class PathWanderer(commands.Cog):
         article = "an" if weapon['display'][0] in ["a", "e", "i", "o", "u"] else "a"
 
         to_hit, damage_mod = self._get_weapon_mods(weapon, char_data)
+        num_dice = self._get_num_damage_dice(weapon['str'])
         die_size = int(weapon['die'].split("d")[1])
 
         # TODO: uh oh. damage bonuses?
@@ -474,7 +475,8 @@ class PathWanderer(commands.Cog):
         embed.title = f"{name} attacks with {article} {weapon['display']}!"
 
         if num_attacks <= 1:
-            output, _, _ = self.make_attack_block(to_hit, damage_mod, to_hit_bonus, die_size)
+            output, _, _ = self.make_attack_block(to_hit, damage_mod, to_hit_bonus, num_dice,
+                die_size)
 
             embed.description = output
         else:
@@ -483,7 +485,7 @@ class PathWanderer(commands.Cog):
                 penalty = 4 if weapon['name'] in AGILE_WEAPONS else 5
                 penalty = penalty * 2 if i > 1 else penalty if i > 0 else 0
                 output, attack_roll, damage_roll = self.make_attack_block(to_hit - penalty,
-                    damage_mod, to_hit_bonus, die_size)
+                    damage_mod, to_hit_bonus, num_dice, die_size)
                 if attack_roll.crit == d20.CritType.CRIT:
                     total_damage += (damage_roll.total + damage_mod) * 2
                 else:
@@ -530,6 +532,7 @@ class PathWanderer(commands.Cog):
             article = "an" if weapon['display'][0] in ["a", "e", "i", "o", "u"] else "a"
 
             to_hit, damage_mod = self._get_weapon_mods(weapon, char_data)
+            num_dice = self._get_num_damage_dice(weapon['str'])
             die_size = int(weapon['die'].split("d")[1])
 
             to_hit_bonus = sum([d20.roll(b).total for b in bonuses[1:]])
@@ -537,7 +540,7 @@ class PathWanderer(commands.Cog):
             penalty = 4 if weapon['name'] in AGILE_WEAPONS else 5
             penalty = penalty * 2 if num_attacks > 1 else penalty if num_attacks > 0 else 0
             output, _, _ = self.make_attack_block(to_hit - penalty, damage_mod, to_hit_bonus,
-                die_size)
+                num_dice, die_size)
 
             csettings[json_id]['consecutive_attacks'] += 1
 
@@ -573,11 +576,23 @@ class PathWanderer(commands.Cog):
 
         return ability_mod + prof_bonus + weapon['pot'], damage_mod
 
-    def make_attack_block(self, to_hit: int, damage_mod: int, to_hit_bonus: int, die_size: int):
+    def _get_num_damage_dice(self, striking_rune: str):
+        if striking_rune == "majorStriking":
+            return 4
+        elif striking_rune == "greaterStriking":
+            return 3
+        elif striking_rune == "striking":
+            return 2
+        else:
+            return 1
+
+    def make_attack_block(self, to_hit: int, damage_mod: int, to_hit_bonus: int, num_dice: int,
+        die_size: int):
         attack_roll = d20.roll(self.make_dice_string(to_hit, to_hit_bonus))
         attack_line = f"**To hit**: {str(attack_roll)}"
 
-        damage_roll = d20.roll(self.make_dice_string(damage_mod, bonuses=0, die_size=die_size))
+        damage_roll = d20.roll(self.make_dice_string(damage_mod, bonuses=0, num_dice=num_dice,
+            die_size=die_size))
         damage_line = f"**Damage**: {str(damage_roll)}"
 
         if attack_roll.crit == d20.CritType.CRIT:
