@@ -618,16 +618,16 @@ class PathWanderer(commands.Cog):
         embed.title = "Spellbook"
 
         focus = char_data['focus']
+        focus_points = char_data['focusPoints']
         # unsure if this will always be a reliable way to determine presence of focus spells
-        if len(focus) > 1 and focus['focusPoints'] > 0:
+        if focus and focus_points > 0:
             focus_spells = []
             for tradition in focus.keys():
-                if tradition != 'focusPoints':
-                    for stat in focus[tradition].keys():
-                        spells = focus[tradition][stat]['focusSpells']
-                        focus_spells.extend(spells)
-                        spell_count += len(spells)
-            focus_field_name = f"Focus Spells {focus['focusPoints'] * SPELL_SLOT_SYMBOL}"
+                for stat in focus[tradition].keys():
+                    spells = focus[tradition][stat]['focusSpells']
+                    focus_spells.extend(spells)
+                    spell_count += len(spells)
+            focus_field_name = f"Focus Spells {focus_points * SPELL_SLOT_SYMBOL}"
             focus_field = ", ".join(focus_spells)
             embed.add_field(name=focus_field_name, value=focus_field, inline=False)
 
