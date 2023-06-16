@@ -745,8 +745,9 @@ class PathWanderer(commands.Cog):
             to_hit, damage_mod = self._get_weapon_mods(weapon, char_data)
             to_hit_op = self._get_op(to_hit)
             damage_op = self._get_op(damage_mod)
+            num_dice = self._get_num_damage_dice(weapon['str'])
             weapon_lines.append(f"**{weapon['display']}**: {to_hit_op}{to_hit} to hit, " + \
-                f"1{weapon['die']} {damage_op} {damage_mod} damage")
+                f"{num_dice}{weapon['die']} {damage_op} {damage_mod} damage")
         weapon_field = "\n".join(weapon_lines)
         embed.add_field(name="Weapon Attacks", value=weapon_field, inline=False)
 
