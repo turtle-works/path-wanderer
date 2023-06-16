@@ -702,6 +702,8 @@ class PathWanderer(commands.Cog):
 
         ability_lines = []
         for ability in char_data['abilities'].keys():
+            if ability == 'breakdown':
+                continue
             mod = self._get_ability_mod(char_data['abilities'][ability])
             op = self._get_op(mod)
             ability_lines.append(f"**{ability.upper()}**: ({op}{mod})")
