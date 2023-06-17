@@ -790,9 +790,9 @@ class PathWanderer(commands.Cog):
         lore_lines = []
         for skill in char_data['lores']:
             prof_label = self._get_prof_label(skill[1])
-            mod = self._get_lore_mod(skill[0].lower(), char_data)
+            mod = self._get_lore_mod(skill[0], char_data)
             op = self._get_op(mod)
-            lore_lines.append(f"{prof_label}{skill[0].capitalize()}: ({op}{abs(mod)})")
+            lore_lines.append(f"{prof_label}{skill[0]}: ({op}{abs(mod)})")
         lore_field = "\n".join(lore_lines)
         embed.add_field(name="Lores", value=lore_field, inline=True)
 
