@@ -358,8 +358,10 @@ class PathWanderer(commands.Cog):
         # check lore skills
         lores = char_data['lores']
         for i in range(len(lores)):
-            if lores[i][0] == check_name.capitalize():
-                return ("lore", lores[i][0].lower())
+            lore_name = "".join(lores[i][0].split(" ")).lower()
+            check_name = "".join(check_name.split(" ")).lower()
+            if check_name in lore_name:
+                return ("lore", lores[i][0])
 
         return None, None
 
@@ -386,7 +388,7 @@ class PathWanderer(commands.Cog):
 
         prof_bonus = 0
         for i in range(len(lores)):
-            if lores[i][0] == lore_name.capitalize():
+            if lores[i][0] == lore_name:
                 prof_bonus = lores[i][1] + (0 if lores[i][1] == 0 else level)
 
         return ability_mod + prof_bonus
