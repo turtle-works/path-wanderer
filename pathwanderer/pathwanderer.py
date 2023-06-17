@@ -487,9 +487,9 @@ class PathWanderer(commands.Cog):
                 output, attack_roll, damage_roll = self.make_attack_block(to_hit - penalty,
                     damage_mod, to_hit_bonus, num_dice, die_size)
                 if attack_roll.crit == d20.CritType.CRIT:
-                    total_damage += (damage_roll.total + damage_mod) * 2
+                    total_damage += damage_roll.total * 2
                 else:
-                    total_damage += damage_roll.total + damage_mod
+                    total_damage += damage_roll.total
                 embed.add_field(name=f"Attack {i + 1}", value=output)
 
             embed.description = f"Total damage: `{total_damage}`"
@@ -597,7 +597,7 @@ class PathWanderer(commands.Cog):
 
         if attack_roll.crit == d20.CritType.CRIT:
             attack_line += " (**crit**)"
-            damage_line += f" -> `{(damage_roll.total + damage_mod) * 2}`"
+            damage_line += f" -> `{damage_roll.total * 2}`"
 
         return f"{attack_line}\n{damage_line}", attack_roll, damage_roll
 
