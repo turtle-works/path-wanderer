@@ -464,7 +464,7 @@ class PathWanderer(commands.Cog):
             csettings[json_id]['consecutive_attacks'] = max(1, num_attacks)
 
         name = char_data['name']
-        article = "an" if weapon['display'][0] in ["a", "e", "i", "o", "u"] else "a"
+        article = "an" if weapon['display'][0].lower() in ["a", "e", "i", "o", "u"] else "a"
 
         to_hit, damage_mod = self._get_weapon_mods(weapon, char_data)
         num_dice = self._get_num_damage_dice(weapon['str'])
@@ -534,7 +534,7 @@ class PathWanderer(commands.Cog):
             bonuses = [b.strip() for b in bonus_str.split("-b")]
 
             name = char_data['name']
-            article = "an" if weapon['display'][0] in ["a", "e", "i", "o", "u"] else "a"
+            article = "an" if weapon['display'][0].lower() in ["a", "e", "i", "o", "u"] else "a"
 
             to_hit, damage_mod = self._get_weapon_mods(weapon, char_data)
             num_dice = self._get_num_damage_dice(weapon['str'])
@@ -880,7 +880,6 @@ class PathWanderer(commands.Cog):
         bonuses = sum([d20.roll(b).total for b in query_parts[1:]])
 
         name = char_data['name']
-        article = "an" if skill[0] in ["a", "e", "i", "o", "u"] else "a"
 
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name} does some research!"
