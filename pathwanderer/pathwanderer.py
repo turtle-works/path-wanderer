@@ -72,6 +72,36 @@ RANGED_WEAPONS = ["Blowgun", "Bola", "Bomb", "Bow Staff - Ranged", "Composite Lo
     "Shield Bow", "Shortbow", "Shuriken", "Sling", "Spraysling", "Sukgung", "Thunder Sling",
     "Wrecker - Ranged"]
 
+STR_THRESH = 0
+PENALTY = 1
+ARMOR_DATA = {
+    'Bastion Plate': (18, -3),
+    'Breastplate': (16, -2),
+    'Buckle Armor': (12, -1),
+    'Ceramic Plate': (14, -2),
+    'Chain Mail': (16, -2),
+    'Chain Shirt': (12, -1),
+    'Coral Armor': (14, -2),
+    'Fortress Plate': (18, -3),
+    'Full Plate': (18, -3),
+    'Half Plate': (16, -3),
+    'Hide Armor': (14, -2),
+    'Lamellar Breastplate': (16, -2),
+    'Lattice Armor': (16, -2),
+    'Leaf Weave': (10, -1),
+    'Leather Armor': (10, -1),
+    'Leather Lamellar': (10, -1),
+    'Niyah\u00e1at': (14, -2),
+    'O-Yoroi': (18, -3),
+    'Padded Armor': (10, 0),
+    'Quilted Armor': (12, -1),
+    'Sankeit': (12, -1),
+    'Scale Mail': (14, -2),
+    'Splint Mail': (16, -3),
+    'Studded Leather Armor': (12, -1),
+    'Wooden Breastplate': (14, -2)
+}
+
 
 class PathWanderer(commands.Cog):
     """Cog that lets users do simple things for Pathfinder 2e."""
@@ -291,6 +321,8 @@ class PathWanderer(commands.Cog):
         lore_indicator = ""
         if skill_type == "check":
             mod = self._get_skill_mod(skill, char_data)
+            if SKILL_DATA[skill][ABILITY] in ["str", "dex"]:
+                mod += self._get_armor_penalty(char_data)
         elif skill_type == "ability":
             mod = self._get_ability_mod(char_data['abilities'][SKILL_DATA[skill][ABILITY]])
         elif skill_type == "lore":
@@ -740,6 +772,8 @@ class PathWanderer(commands.Cog):
                 continue
             prof_label = self._get_prof_label(profs[skill])
             mod = self._get_skill_mod(skill, char_data)
+            if SKILL_DATA[skill][ABILITY] in ["str", "dex"]:
+                mod += self._get_armor_penalty(char_data)
             op = self._get_op(mod)
 
             line = f"{prof_label}{skill.capitalize()}: ({op}{abs(mod)})"
@@ -794,6 +828,24 @@ class PathWanderer(commands.Cog):
             label = ""
 
         return label
+
+    def _get_armor_penalty(self, char_data: dict):
+        all_armor = char_data['armor']
+
+        worn_armor = None
+        for armor in all_armor:
+            if armor['worn'] and armor['name'] in ARMOR_DATA.keys():
+                worn_armor = armor
+        if not worn_armor:
+            return 0
+
+        strength = char_data['abilities']['str']
+        data = ARMOR_DATA[worn_armor['name']]
+
+        if strength < data[STR_THRESH]:
+            return data[PENALTY]
+        else:
+            return 0
 
     async def _get_base_embed(self, ctx):
         embed = discord.Embed()
