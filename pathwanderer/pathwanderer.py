@@ -704,9 +704,10 @@ class PathWanderer(commands.Cog):
         for ability in char_data['abilities'].keys():
             if ability == 'breakdown':
                 continue
-            mod = self._get_ability_mod(char_data['abilities'][ability])
+            score = char_data['abilities'][ability]
+            mod = self._get_ability_mod(score)
             op = self._get_op(mod)
-            ability_lines.append(f"**{ability.upper()}**: ({op}{mod})")
+            ability_lines.append(f"**{ability.upper()}**: {score} ({op}{abs(mod)})")
         abilities_field = " ".join(ability_lines[:3]) + "\n" + " ".join(ability_lines[3:])
         embed.add_field(name="Ability Scores", value=abilities_field, inline=False)
 
@@ -720,7 +721,7 @@ class PathWanderer(commands.Cog):
             mod = self._get_skill_mod(skill, char_data)
             op = self._get_op(mod)
 
-            line = f"{prof_label}{skill.capitalize()}: ({op}{mod})"
+            line = f"{prof_label}{skill.capitalize()}: ({op}{abs(mod)})"
             if SKILL_DATA[skill][TYPE] == "save":
                 save_lines.append(line)
             else:
@@ -736,7 +737,7 @@ class PathWanderer(commands.Cog):
             prof_label = self._get_prof_label(skill[1])
             mod = self._get_lore_mod(skill[0].lower(), char_data)
             op = self._get_op(mod)
-            lore_lines.append(f"{prof_label}{skill[0].capitalize()}: ({op}{mod})")
+            lore_lines.append(f"{prof_label}{skill[0].capitalize()}: ({op}{abs(mod)})")
         lore_field = "\n".join(lore_lines)
         embed.add_field(name="Lores", value=lore_field, inline=True)
 
@@ -746,8 +747,8 @@ class PathWanderer(commands.Cog):
             to_hit_op = self._get_op(to_hit)
             damage_op = self._get_op(damage_mod)
             num_dice = self._get_num_damage_dice(weapon['str'])
-            weapon_lines.append(f"**{weapon['display']}**: {to_hit_op}{to_hit} to hit, " + \
-                f"{num_dice}{weapon['die']} {damage_op} {damage_mod} damage")
+            weapon_lines.append(f"**{weapon['display']}**: {to_hit_op}{abs(to_hit)} to hit, " + \
+                f"{num_dice}{weapon['die']} {damage_op} {abs(damage_mod)} damage")
         weapon_field = "\n".join(weapon_lines)
         embed.add_field(name="Weapon Attacks", value=weapon_field, inline=False)
 
