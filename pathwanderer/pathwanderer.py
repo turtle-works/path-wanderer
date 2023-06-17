@@ -553,30 +553,44 @@ class PathWanderer(commands.Cog):
             await ctx.send(embed=embed)
 
     def _get_weapon_mods(self, weapon: dict, char_data: dict):
-        abilities = char_data['abilities']
-        level = char_data['level']
-        profs = char_data['proficiencies']
+        # new values that render manual calculations moot
+        return weapon['attack'], weapon['damageBonus']
 
-		# have to manually do all this stuff
-        if weapon['name'] in FINESSE_WEAPONS:
-            ability_mod = self._get_ability_mod(max(abilities['str'], abilities['dex']))
-        elif weapon['name'] in RANGED_WEAPONS:
-            ability_mod = self._get_ability_mod(abilities['dex'])
-        else:
-            ability_mod = self._get_ability_mod(abilities['str'])
+        # abilities = char_data['abilities']
+        # level = char_data['level']
+        # profs = char_data['proficiencies']
+        # specifics = char_data['specificProficiencies']
 
-        # TODO: how to establish when a weapon is being thrown?
-        if weapon['name'] in PROPULSIVE_WEAPONS:
-            str_mod = self._get_ability_mod(abilities['str'])
-            damage_mod = math.floor(str_mod / 2) if str_mod > 0 else str_mod
-        elif weapon['name'] in RANGED_WEAPONS:
-            damage_mod = 0
-        else:
-            damage_mod = self._get_ability_mod(abilities['str'])
+		# # have to manually do all this stuff
+        # if weapon['name'] in FINESSE_WEAPONS:
+        #     ability_mod = self._get_ability_mod(max(abilities['str'], abilities['dex']))
+        # elif weapon['name'] in RANGED_WEAPONS:
+        #     ability_mod = self._get_ability_mod(abilities['dex'])
+        # else:
+        #     ability_mod = self._get_ability_mod(abilities['str'])
 
-        prof_bonus = profs[weapon['prof']] + (0 if profs[weapon['prof']] == 0 else level)
+        # # TODO: how to establish when a weapon is being thrown?
+        # if weapon['name'] in PROPULSIVE_WEAPONS:
+        #     str_mod = self._get_ability_mod(abilities['str'])
+        #     damage_mod = math.floor(str_mod / 2) if str_mod > 0 else str_mod
+        # elif weapon['name'] in RANGED_WEAPONS:
+        #     damage_mod = 0
+        # else:
+        #     damage_mod = self._get_ability_mod(abilities['str'])
 
-        return ability_mod + prof_bonus + weapon['pot'], damage_mod + weapon['damageBonus']
+        # if weapon['name'] in specifics['trained']:
+        #     prof = 2
+        # elif weapon['name'] in specifics['expert']:
+        #     prof = 4
+        # elif weapon['name'] in specifics['master']:
+        #     prof = 6
+        # elif weapon['name'] in specifics['legendary']:
+        #     prof = 8
+        # else:
+        #     prof = profs[weapon['prof']]
+        # prof_bonus = prof + (0 if prof == 0 else level)
+
+        # return ability_mod + prof_bonus + weapon['pot'], damage_mod
 
     def _get_num_damage_dice(self, striking_rune: str):
         if striking_rune == "majorStriking":
