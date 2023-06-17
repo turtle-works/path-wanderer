@@ -478,7 +478,7 @@ class PathWanderer(commands.Cog):
 
         if num_attacks <= 1:
             output, _, _ = self.make_attack_block(to_hit, damage_mod, to_hit_bonus, num_dice,
-                die_size)
+                die_size=die_size or 1)
 
             embed.description = output
         else:
@@ -487,7 +487,7 @@ class PathWanderer(commands.Cog):
                 penalty = 4 if weapon['name'] in AGILE_WEAPONS else 5
                 penalty = penalty * 2 if i > 1 else penalty if i > 0 else 0
                 output, attack_roll, damage_roll = self.make_attack_block(to_hit - penalty,
-                    damage_mod, to_hit_bonus, num_dice, die_size)
+                    damage_mod, to_hit_bonus, num_dice, die_size=die_size or 1)
                 if attack_roll.crit == d20.CritType.CRIT:
                     total_damage += damage_roll.total * 2
                 else:
@@ -495,6 +495,9 @@ class PathWanderer(commands.Cog):
                 embed.add_field(name=f"Attack {i + 1}", value=output)
 
             embed.description = f"Total damage: `{total_damage}`"
+
+        if not die_size:
+            embed.set_footer(text="The d1 is filler. This weapon's damage varies.")
 
         await ctx.send(embed=embed)
 
@@ -542,13 +545,15 @@ class PathWanderer(commands.Cog):
             penalty = 4 if weapon['name'] in AGILE_WEAPONS else 5
             penalty = penalty * 2 if num_attacks > 1 else penalty if num_attacks > 0 else 0
             output, _, _ = self.make_attack_block(to_hit - penalty, damage_mod, to_hit_bonus,
-                num_dice, die_size)
+                num_dice, die_size=die_size or 1)
 
             csettings[json_id]['consecutive_attacks'] += 1
 
             embed = await self._get_base_embed(ctx)
             embed.title = f"{name} attacks again with {article} {weapon['display']}!"
             embed.description = output
+            if not die_size:
+                embed.set_footer(text="The d1 is filler. This weapon's damage varies.")
 
             await ctx.send(embed=embed)
 
@@ -763,8 +768,14 @@ class PathWanderer(commands.Cog):
             to_hit_op = self._get_op(to_hit)
             damage_op = self._get_op(damage_mod)
             num_dice = self._get_num_damage_dice(weapon['str'])
+
+            if weapon['die'] == "d0":
+                damage_display = "damage varies"
+            else:
+                damage_display = f"{num_dice}{weapon['die']} {damage_op} {abs(damage_mod)} damage"
+
             weapon_lines.append(f"**{weapon['display']}**: {to_hit_op}{abs(to_hit)} to hit, " + \
-                f"{num_dice}{weapon['die']} {damage_op} {abs(damage_mod)} damage")
+                f"{damage_display}")
         weapon_field = "\n".join(weapon_lines)
         embed.add_field(name="Weapon Attacks", value=weapon_field, inline=False)
 
