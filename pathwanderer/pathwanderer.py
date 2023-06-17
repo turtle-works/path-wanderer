@@ -101,8 +101,8 @@ class PathWanderer(commands.Cog):
         """
         await self.config.user_from_id(user_id).clear()
 
-    @commands.command(aliases=["import", "mmimport", "pfimport"])
-    async def loadchar(self, ctx, url: str):
+    @commands.command(name="import", aliases=["loadchar", "mmimport", "pfimport"])
+    async def import_char(self, ctx, url: str):
         """Import from a Pathbuilder 2e JSON."""
         if re.match(PATHBUILDER_URL_TEMPLATE, url):
             char_url = url
