@@ -478,14 +478,14 @@ class PathWanderer(commands.Cog):
     async def _attack(self, ctx, char_data: dict, num_attacks: int, query: str):
         query_parts = [p.strip() for p in query.split("-b")]
 
-        weapon_name = query_parts[0]
+        weapon_query = query_parts[0]
 
         weapon = None
         for weap in char_data['weapons']:
-            if weapon_name.lower() in weap['display'].lower():
+            if weapon_query.lower() in weap['display'].lower():
                 weapon = weap
         if weapon is None:
-            await ctx.send(f"Did not find `{weapon_name}` in available weapons.")
+            await ctx.send(f"Did not find `{weapon_query}` in available weapons.")
             return
 
         async with self.config.user(ctx.author).csettings() as csettings:
@@ -534,12 +534,13 @@ class PathWanderer(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(aliases=["attack2", "attack3", "ra", "repattack"])
-    async def repeatattack(self, ctx, *, bonus_str=""):
-        """Make another attack with the most recently used weapon.
-
-        Repeated attacks are assumed to be part of the same turn; multiple attack penalty applies.
+    async def repeatattack(self, ctx, *, query=""):
+        """Make another attack on the current turn.
+        
+        If no weapon is given, uses the most recently used weapon. Multiple attack penalty applies.
         To-hit bonuses can be added with the -b flag. Examples:
         `[p]repeatattack`
+        `[p]repeatattack shortbow`
         `[p]repeatattack -b 1`
         """
         json_id = await self.config.user(ctx.author).active_char()
@@ -550,20 +551,35 @@ class PathWanderer(commands.Cog):
         data = await self.config.user(ctx.author).characters()
         char_data = data[json_id]['build']
 
+        query_parts = [p.strip() for p in query.split("-b")]
+        if query_parts and query_parts[0]:
+            weapon_query = query_parts[0]
+        else:
+            weapon_query = None
+
         async with self.config.user(ctx.author).csettings() as csettings:
             if json_id not in csettings:
                 csettings[json_id] = {}
             if 'consecutive_attacks' not in csettings[json_id]:
                 csettings[json_id]['consecutive_attacks'] = 1
-            if 'last_weapon' not in csettings[json_id]:
+            if 'last_weapon' not in csettings[json_id] and not weapon_query:
                 await ctx.send("Unable to repeat attack; you haven't made any. " + \
                     "Use `attack` or `multiattack` instead.")
                 return
 
-            weapon = csettings[json_id]['last_weapon']
-            num_attacks = csettings[json_id]['consecutive_attacks']
+            weapon = None
+            if weapon_query:
+                for weap in char_data['weapons']:
+                    if weapon_query.lower() in weap['display'].lower():
+                        weapon = weap
+                        csettings[json_id]['last_weapon'] = weapon
+                if weapon is None:
+                    await ctx.send(f"Did not find `{weapon_query}` in available weapons.")
+                    return
+            else:
+                weapon = csettings[json_id]['last_weapon']
 
-            bonuses = [b.strip() for b in bonus_str.split("-b")]
+            num_attacks = csettings[json_id]['consecutive_attacks']
 
             name = char_data['name']
             article = "an" if weapon['display'][0].lower() in ["a", "e", "i", "o", "u"] else "a"
@@ -572,7 +588,7 @@ class PathWanderer(commands.Cog):
             num_dice = self._get_num_damage_dice(weapon['str'])
             die_size = int(weapon['die'].split("d")[1])
 
-            to_hit_bonus = sum([d20.roll(b).total for b in bonuses[1:]])
+            to_hit_bonus = sum([d20.roll(b).total for b in query_parts[1:]])
 
             penalty = 4 if weapon['name'] in AGILE_WEAPONS else 5
             penalty = penalty * 2 if num_attacks > 1 else penalty if num_attacks > 0 else 0
