@@ -322,7 +322,7 @@ class PathWanderer(commands.Cog):
         if skill_type == "check":
             mod = self._get_skill_mod(skill, char_data)
             if SKILL_DATA[skill][ABILITY] in ["str", "dex"]:
-                mod += self._get_armor_penalty(char_data)
+                mod += await self._get_armor_penalty(ctx, char_data)
         elif skill_type == "ability":
             mod = self._get_ability_mod(char_data['abilities'][SKILL_DATA[skill][ABILITY]])
         elif skill_type == "lore":
@@ -773,7 +773,7 @@ class PathWanderer(commands.Cog):
             prof_label = self._get_prof_label(profs[skill])
             mod = self._get_skill_mod(skill, char_data)
             if SKILL_DATA[skill][ABILITY] in ["str", "dex"]:
-                mod += self._get_armor_penalty(char_data)
+                mod += await self._get_armor_penalty(ctx, char_data)
             op = self._get_op(mod)
 
             line = f"{prof_label}{skill.capitalize()}: ({op}{abs(mod)})"
@@ -829,7 +829,11 @@ class PathWanderer(commands.Cog):
 
         return label
 
-    def _get_armor_penalty(self, char_data: dict):
+    async def _get_armor_penalty(self, ctx, char_data: dict):
+        async with self.config.user(ctx.author).preferences() as preferences:
+            if 'armor_penalty' in preferences.keys() and not preferences['armor_penalty']:
+                return 0
+
         all_armor = char_data['armor']
 
         worn_armor = None
@@ -846,6 +850,31 @@ class PathWanderer(commands.Cog):
             return data[PENALTY]
         else:
             return 0
+
+    @commands.command()
+    async def armorpenalty(self, ctx, setting=""):
+        """Toggle if the armor check penalty will apply to your characters."""
+        if setting and setting.lower() not in ["off", "on"]:
+            await ctx.send("Setting should be \"off\" or \"on\" (or left out, to just toggle).")
+            return
+
+        async with self.config.user(ctx.author).preferences() as preferences:
+            if 'armor_penalty' not in preferences:
+                preferences['armor_penalty'] = True
+            current_setting = preferences['armor_penalty']
+
+            if setting.lower() == "off":
+                new_setting = False
+            elif setting.lower() == "on":
+                new_setting = True
+            else:
+                new_setting = not current_setting
+
+            preferences['armor_penalty'] = new_setting
+
+        label = "on" if new_setting else "off"
+
+        await ctx.send(f"Turned armor check penalty **{label}** for all characters.")
 
     async def _get_base_embed(self, ctx):
         embed = discord.Embed()
