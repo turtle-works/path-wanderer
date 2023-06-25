@@ -938,7 +938,7 @@ class PathWanderer(commands.Cog):
             f"I can help you look it up on the Archives of Nethys, though:\n{aon_link}"
 
     @commands.command()
-    async def research(self, ctx, days: int, dc: int, *, query: str):
+    async def research(self, ctx, dtp: int, dc: int, *, query: str):
         """Spend downtime doing research.
         
         Bonuses can be added with the -b flag. Examples:
@@ -953,7 +953,7 @@ class PathWanderer(commands.Cog):
         data = await self.config.user(ctx.author).characters()
         char_data = data[json_id]['build']
 
-        days = min(days, 24)
+        dtp = min(dtp, 24)
 
         query_parts = [p.strip() for p in query.split("-b")]
 
@@ -982,7 +982,7 @@ class PathWanderer(commands.Cog):
         embed.title = f"{name} does some research!"
 
         total_kp = 0
-        for i in range(days):
+        for i in range(dtp):
             research_roll = d20.roll(self.make_dice_string(mod, bonuses))
             if research_roll.total >= dc + 10:
                 kp = 2
