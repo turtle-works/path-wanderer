@@ -788,7 +788,7 @@ class PathWanderer(commands.Cog):
                 continue
             prof_label = self._get_prof_label(profs[skill])
             mod = self._get_skill_mod(skill, char_data)
-            if SKILL_DATA[skill][ABILITY] in ["str", "dex"]:
+            if SKILL_DATA[skill][TYPE] == "check" and SKILL_DATA[skill][ABILITY] in ["str", "dex"]:
                 mod += await self._get_armor_penalty(ctx, char_data)
             op = self._get_op(mod)
 
