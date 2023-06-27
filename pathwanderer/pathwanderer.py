@@ -199,7 +199,7 @@ class PathWanderer(commands.Cog):
 
     @character.command(name="list")
     async def character_list(self, ctx):
-        """Show all characters that the user has imported."""
+        """List all characters that the user has imported."""
         characters = await self.config.user(ctx.author).characters()
         if not characters:
             await ctx.send("You have no characters.")
@@ -672,7 +672,7 @@ class PathWanderer(commands.Cog):
 
     @commands.command(aliases=["pfspellbook", "pfspells", "spells"])
     async def spellbook(self, ctx):
-        """Show the active character's spells."""
+        """List the active character's spells."""
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
             await ctx.send("Set an active character first with `character setactive`.")
@@ -696,7 +696,7 @@ class PathWanderer(commands.Cog):
                     spells = focus[tradition][stat]['focusSpells']
                     focus_spells.extend(spells)
                     spell_count += len(spells)
-            focus_field_name = f"Focus Spells {focus_points * SPELL_SLOT_SYMBOL}"
+            focus_field_name = f"Focus {focus_points * SPELL_SLOT_SYMBOL}"
             focus_field = ", ".join(focus_spells)
             embed.add_field(name=focus_field_name, value=focus_field, inline=False)
 
@@ -894,7 +894,7 @@ class PathWanderer(commands.Cog):
 
     @commands.command(aliases=["specials"])
     async def feats(self, ctx):
-        """Lists the active character's feats and specials.
+        """List the active character's feats and specials.
         
         This is a list of what's on the Pathbuilder 2e Feats tab."""
         json_id = await self.config.user(ctx.author).active_char()
