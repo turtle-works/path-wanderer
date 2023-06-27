@@ -892,6 +892,46 @@ class PathWanderer(commands.Cog):
 
         await ctx.send(f"Turned armor check penalty **{label}** for all characters.")
 
+    @commands.command(aliases=["specials"])
+    async def feats(self, ctx):
+        """Lists the active character's feats and specials.
+        
+        This is a list of what's on the Pathbuilder 2e Feats tab."""
+        json_id = await self.config.user(ctx.author).active_char()
+        if json_id is None:
+            await ctx.send("Set an active character first with `character setactive`.")
+            return
+
+        data = await self.config.user(ctx.author).characters()
+        char_data = data[json_id]['build']
+
+        name = char_data['name']
+        heritage = char_data['heritage']
+
+        embed = await self._get_base_embed(ctx)
+        embed.title = f"{name}'s Feats and Specials"
+
+        feats = char_data['feats']
+        feat_lines = []
+        for feat in feats:
+            if feat[2] != "Heritage":
+                bonus = f" ({feat[1]})" if feat[1] else ""
+                feat_lines.append(f"{feat[0]}{bonus}")
+        feat_lines.sort()
+        feats_field = "\n".join(feat_lines)
+        embed.add_field(name="Feats", value=feats_field)
+        
+        specials = char_data['specials']
+        special_lines = []
+        for special in specials:
+            # show heritage under specials
+            special_lines.append(f"{special}{' (Heritage)' if special == heritage else ''}")
+        special_lines.sort()
+        specials_field = "\n".join(special_lines)
+        embed.add_field(name="Specials", value=specials_field)
+
+        await ctx.send(embed=embed)
+
     async def _get_base_embed(self, ctx):
         embed = discord.Embed()
         json_id = await self.config.user(ctx.author).active_char()
