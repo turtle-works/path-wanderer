@@ -771,22 +771,50 @@ class PathWanderer(commands.Cog):
         data = await self.config.user(ctx.author).characters()
         char_data = data[json_id]['build']
 
+        level = char_data['level']
+        profs = char_data['proficiencies']
+        attributes = char_data['attributes']
+        abilities = char_data['abilities']
+
         embed = await self._get_base_embed(ctx)
         embed.title = f"{char_data['name']}"
-        embed.description = f"{char_data['class']} {char_data['level']}"
+
+        desc_lines = []
+        desc_lines.append(f"{char_data['class']} {level}")
+
+        key_mod = self._get_ability_mod(abilities[char_data['keyability']])
+        class_dc = 10 + profs['classDC'] + (0 if profs['classDC'] == 0 else level) + key_mod
+        desc_lines.append(f"**Class DC**: {class_dc}")
+
+        max_hp = attributes['ancestryhp'] + attributes['bonushp']
+        max_hp += (attributes['classhp'] + attributes['bonushpPerLevel'] + \
+            self._get_ability_mod(abilities['con'])) * level
+        ac = char_data['acTotal']['acTotal']
+        desc_lines.append(f"**Max HP**: {max_hp} **AC**: {ac}")
+
+        customs = sum([1 if "Custom Dialect" in l else 0 for l in char_data['languages']])
+        plural = "s" if customs != 1 else ""
+        custom_language_str = f" (+{customs} custom language{plural})" if customs else ""
+        languages = []
+        for language in char_data['languages']:
+            if "Custom Dialect" not in language:
+                languages.append(language)
+        desc_lines.append(f"**Languages**: {', '.join(languages)}" + \
+            f"{custom_language_str}")
+
+        embed.description = "\n".join(desc_lines)
 
         ability_lines = []
-        for ability in char_data['abilities'].keys():
+        for ability in abilities.keys():
             if ability == 'breakdown':
                 continue
-            score = char_data['abilities'][ability]
+            score = abilities[ability]
             mod = self._get_ability_mod(score)
             op = self._get_op(mod)
             ability_lines.append(f"**{ability.upper()}**: {score} ({op}{abs(mod)})")
         abilities_field = " ".join(ability_lines[:3]) + "\n" + " ".join(ability_lines[3:])
         embed.add_field(name="Ability Scores", value=abilities_field, inline=False)
 
-        profs = char_data['proficiencies']
         save_lines = []
         skill_lines = []
         for skill in SKILL_DATA.keys():
