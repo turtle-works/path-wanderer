@@ -342,6 +342,9 @@ class PathWanderer(commands.Cog):
         name = char_data['name']
         article = "an" if skill[0] in ["a", "e", "i", "o", "u"] and not lore_indicator else "a"
 
+        if not lore_indicator:
+            skill = skill.capitalize()
+
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name} makes {article} {lore_indicator}{skill} check!"
         embed.description = str(d20.roll(self.make_dice_string(mod, bonuses)))
@@ -378,7 +381,7 @@ class PathWanderer(commands.Cog):
         name = char_data['name']
 
         embed = await self._get_base_embed(ctx)
-        embed.title = f"{name} makes a {skill} save!"
+        embed.title = f"{name} makes a {skill.capitalize()} save!"
         embed.description = str(d20.roll(self.make_dice_string(mod, bonuses)))
 
         await ctx.send(embed=embed)
@@ -1084,6 +1087,9 @@ class PathWanderer(commands.Cog):
                 kp = max(-1, kp - 1)
             total_kp += kp
             embed.add_field(name=f"DTP {i + 1}: {kp} KP", value=str(research_roll))
+
+        if skill_type != "lore":
+            skill = skill.capitalize()
 
         embed.description = f"DC {dc} {skill}\n" + \
             f"Total KP from this session: **{total_kp}**"
