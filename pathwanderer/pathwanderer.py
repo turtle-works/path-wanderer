@@ -696,14 +696,24 @@ class PathWanderer(commands.Cog):
         focus_points = char_data['focusPoints']
         # unsure if this will always be a reliable way to determine presence of focus spells
         if focus and focus_points > 0:
+            focus_cantrips = []
             focus_spells = []
             for tradition in focus.keys():
                 for stat in focus[tradition].keys():
+                    cantrips = focus[tradition][stat]['focusCantrips']
+                    focus_cantrips.extend(cantrips)
+                    spell_count += len(cantrips)
+
                     spells = focus[tradition][stat]['focusSpells']
                     focus_spells.extend(spells)
                     spell_count += len(spells)
+
             focus_field_name = f"Focus {focus_points * SPELL_SLOT_SYMBOL}"
-            focus_field = ", ".join(focus_spells)
+            focus_field = ""
+            if focus_cantrips:
+                focus_field += "**Cantrip**: " + ", ".join(focus_cantrips)
+                focus_field += "\n**Spell**: "
+            focus_field += ", ".join(focus_spells)
             embed.add_field(name=focus_field_name, value=focus_field, inline=False)
 
         spellcasting = char_data['spellCasters']
