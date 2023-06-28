@@ -913,6 +913,7 @@ class PathWanderer(commands.Cog):
 
         feats = char_data['feats']
         feat_lines = []
+        # list of four values: name, additional information, type, level
         for feat in feats:
             if feat[2] != "Heritage":
                 bonus = f" ({feat[1]})" if feat[1] else ""
@@ -929,6 +930,49 @@ class PathWanderer(commands.Cog):
         special_lines.sort()
         specials_field = "\n".join(special_lines)
         embed.add_field(name="Specials", value=specials_field)
+
+        await ctx.send(embed=embed)
+
+    @commands.command(aliases=["equip", "equipment", "inventory"])
+    async def gear(self, ctx):
+        """List the active character's gear."""
+        json_id = await self.config.user(ctx.author).active_char()
+        if json_id is None:
+            await ctx.send("Set an active character first with `character setactive`.")
+            return
+
+        data = await self.config.user(ctx.author).characters()
+        char_data = data[json_id]['build']
+
+        name = char_data['name']
+
+        embed = await self._get_base_embed(ctx)
+        embed.title = f"{name}'s Gear"
+
+        all_items = {'main': ["Main Inventory", []]}
+        containers = char_data['equipmentContainers']
+        for container in containers.keys():
+            all_items[container] = [containers[container]['containerName'], []]
+
+        equipment = char_data['equipment']
+        if not equipment:
+            embed.description = "This character has no gear."
+            await ctx.send(embed=embed)
+            return
+
+        for equip in equipment:
+            # either [name, quantity] or [name, quantity, container id]
+            if len(equip) == 2:
+                target = all_items['main'][1]
+            else:
+                target = all_items[equip[2]][1]
+            target.append(f"{equip[0]} ({equip[1]})")
+
+        for group in all_items.keys():
+            if all_items[group][1]:
+                all_items[group][1].sort()
+                field = "\n".join(all_items[group][1])
+                embed.add_field(name=f"{all_items[group][0]}", value=field)
 
         await ctx.send(embed=embed)
 
