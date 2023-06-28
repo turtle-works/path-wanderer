@@ -242,6 +242,9 @@ class PathWanderer(commands.Cog):
             await ctx.send("Set an active character first with `character setactive`.")
             return
 
+        data = await self.config.user(ctx.author).characters()
+        name = data[json_id]['build']['name']
+
         if re.match(r"^#?[0-9a-fA-F]{6}$", color) or color.lower() == "random":
             async with self.config.user(ctx.author).csettings() as csettings:
                 if json_id not in csettings:
@@ -252,7 +255,7 @@ class PathWanderer(commands.Cog):
                 else:
                     csettings[json_id]['color'] = int(color.lstrip("#"), 16)
             embed = await self._get_base_embed(ctx)
-            embed.description = "Embed color has been set."
+            embed.description = f"Embed color has been set for {name}."
             await ctx.send(embed=embed)
         else:
             await ctx.send(f"Could not interpret `{color}` as a color.")
@@ -911,10 +914,9 @@ class PathWanderer(commands.Cog):
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name}'s Feats and Specials"
 
-        feats = char_data['feats']
         feat_lines = []
         # list of four values: name, additional information, type, level
-        for feat in feats:
+        for feat in char_data['feats']:
             if feat[2] != "Heritage":
                 bonus = f" ({feat[1]})" if feat[1] else ""
                 feat_lines.append(f"{feat[0]}{bonus}")
@@ -922,9 +924,8 @@ class PathWanderer(commands.Cog):
         feats_field = "\n".join(feat_lines)
         embed.add_field(name="Feats", value=feats_field)
         
-        specials = char_data['specials']
         special_lines = []
-        for special in specials:
+        for special in char_data['specials']:
             # show heritage under specials
             special_lines.append(f"{special}{' (Heritage)' if special == heritage else ''}")
         special_lines.sort()
