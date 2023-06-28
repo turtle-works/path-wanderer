@@ -882,14 +882,14 @@ class PathWanderer(commands.Cog):
 
     async def _get_armor_penalty(self, ctx, char_data: dict):
         async with self.config.user(ctx.author).preferences() as preferences:
-            if 'armor_penalty' in preferences.keys() and not preferences['armor_penalty']:
+            if 'armor_penalty' in preferences and not preferences['armor_penalty']:
                 return 0
 
         all_armor = char_data['armor']
 
         worn_armor = None
         for armor in all_armor:
-            if armor['worn'] and armor['name'] in ARMOR_DATA.keys():
+            if armor['worn'] and armor['name'] in ARMOR_DATA:
                 worn_armor = armor
         if not worn_armor:
             return 0
@@ -982,6 +982,7 @@ class PathWanderer(commands.Cog):
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name}'s Gear"
 
+        # container id or main: [name, [list of items]]
         all_items = {'main': ["Main Inventory", []]}
         containers = char_data['equipmentContainers']
         for container in containers.keys():
@@ -994,11 +995,16 @@ class PathWanderer(commands.Cog):
             return
 
         for equip in equipment:
-            # either [name, quantity] or [name, quantity, container id]
+            # if it's length 2 it's in the main inventory
+            # if it's length 3 equip[2] MIGHT be a container id
+            # if it's length 4 equip[2] is a container id
             if len(equip) == 2:
                 target = all_items['main'][1]
             else:
-                target = all_items[equip[2]][1]
+                if equip[2] in all_items:
+                    target = all_items[equip[2]][1]
+                else:
+                    target = all_items['main'][1]
             target.append(f"{equip[0]} ({equip[1]})")
 
         for group in all_items.keys():
