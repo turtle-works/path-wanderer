@@ -782,9 +782,10 @@ class PathWanderer(commands.Cog):
         desc_lines = []
         desc_lines.append(f"{char_data['class']} {level}")
 
-        key_mod = self._get_ability_mod(abilities[char_data['keyability']])
-        class_dc = 10 + profs['classDC'] + (0 if profs['classDC'] == 0 else level) + key_mod
-        desc_lines.append(f"**Class DC**: {class_dc}")
+        if 'classDC' in profs:
+            key_mod = self._get_ability_mod(abilities[char_data['keyability']])
+            class_dc = 10 + profs['classDC'] + (0 if profs['classDC'] == 0 else level) + key_mod
+            desc_lines.append(f"**Class DC**: {class_dc}")
 
         max_hp = attributes['ancestryhp'] + attributes['bonushp']
         max_hp += (attributes['classhp'] + attributes['bonushpPerLevel'] + \
