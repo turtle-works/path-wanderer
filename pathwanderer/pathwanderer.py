@@ -548,7 +548,7 @@ class PathWanderer(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(aliases=["attack2", "attack3", "ra", "repattack"])
-    async def repeatattack(self, ctx, *, query=""):
+    async def repeatattack(self, ctx, *, query: str=""):
         """Make another attack on the current turn.
         
         If no weapon is given, uses the most recently used weapon. Multiple attack penalty applies.
@@ -921,7 +921,7 @@ class PathWanderer(commands.Cog):
             return 0
 
     @commands.command()
-    async def armorpenalty(self, ctx, setting=""):
+    async def armorpenalty(self, ctx, setting: str=""):
         """Toggle if the armor check penalty will apply to your characters."""
         if setting and setting.lower() not in ["off", "on"]:
             await ctx.send("Setting should be \"off\" or \"on\" (or left out, to just toggle).")
@@ -1046,7 +1046,7 @@ class PathWanderer(commands.Cog):
         return embed
 
     @commands.command(aliases=["aon", "aonlookup", "pflookup"])
-    async def lookup(self, ctx, *, query):
+    async def lookup(self, ctx, *, query: str):
         """Look something up.
         
         Gives a link to a search on the Archives of Nethys for the given term.
@@ -1054,22 +1054,22 @@ class PathWanderer(commands.Cog):
         await ctx.send(self._lmgtfy(f"`{query}`", query))
 
     @commands.command(aliases=['pffeat'])
-    async def feat(self, ctx, *, feat_name):
+    async def feat(self, ctx, *, feat_name: str):
         """Look up a feat (sort of)."""
         await ctx.send(self._lmgtfy("feats", feat_name))
 
     @commands.command(aliases=["pfitem"])
-    async def item(self, ctx, *, item_name):
+    async def item(self, ctx, *, item_name: str):
         """Look up a piece of equipment (sort of)."""
         await ctx.send(self._lmgtfy("items", item_name))
 
     @commands.command(aliases=["pfspell"])
-    async def spell(self, ctx, *, spell_name):
+    async def spell(self, ctx, *, spell_name: str):
         """Look up a spell (sort of)."""
         await ctx.send(self._lmgtfy("spells", spell_name))
 
     @commands.command(aliases=["pfweapon"])
-    async def weapon(self, ctx, *, weapon_name):
+    async def weapon(self, ctx, *, weapon_name: str):
         """Look up a weapon (sort of)."""
         await ctx.send(self._lmgtfy("weapons", weapon_name))
 
@@ -1132,12 +1132,13 @@ class PathWanderer(commands.Cog):
             elif research_roll.total > dc - 10:
                 kp = 0
             else:
-                kp = -1
+                # kp = -1
+                kp = 0
 
             if research_roll.crit == d20.CritType.CRIT:
                 kp = min(2, kp + 1)
-            elif research_roll.crit == d20.CritType.FAIL:
-                kp = max(-1, kp - 1)
+            # elif research_roll.crit == d20.CritType.FAIL:
+            #     kp = max(-1, kp - 1)
             total_kp += kp
             embed.add_field(name=f"DTP {i + 1}: {kp} KP", value=str(research_roll))
 
