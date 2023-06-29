@@ -268,6 +268,48 @@ class PathWanderer(commands.Cog):
         else:
             await ctx.send(f"Could not interpret `{color}` as a color.")
 
+    @character.command(name="setimage")
+    async def character_image(self, ctx, *, image: str=""):
+        """Set the active character's image.
+        
+        Takes either an attached image, an image link, or "none" (to delete).
+        """
+        json_id = await self.config.user(ctx.author).active_char()
+        if json_id is None:
+            await ctx.send("Set an active character first with `character setactive`.")
+            return
+
+        data = await self.config.user(ctx.author).characters()
+        name = data[json_id]['build']['name']
+        if len(ctx.message.attachments):
+            if not ctx.message.attachments[0].content_type.startswith("image"):
+                await ctx.send("Could not interpret the attachment as an image.")
+                return
+            else:
+                url = ctx.message.attachments[0].url
+        else:
+            if not image:
+                await ctx.send("Could not interpret image link.")
+                return
+            elif image == "none":
+                url = None
+            else:
+                if "pathbuilder2e.com" in image:
+                    await ctx.send("Please don't use images hosted from Pathbuilder 2e, " + \
+                        "I'm sure I'm putting too much stress on their server already.")
+                    return
+                url = image
+
+        async with self.config.user(ctx.author).csettings() as csettings:
+            if json_id not in csettings:
+                csettings[json_id] = {}
+            csettings[json_id]['image_url'] = url
+
+        embed = await self._get_base_embed(ctx)
+        embed.description = f"Image has been set for {name}."
+
+        await ctx.send(embed=embed)
+
     @character.command(name="remove", aliases=["delete"])
     async def character_remove(self, ctx, *, query: str):
         """Remove a character from the list."""
@@ -1042,6 +1084,10 @@ class PathWanderer(commands.Cog):
             embed.colour = discord.Colour(settings[json_id]['color'])
         else:
             embed.colour = discord.Colour(random.randint(0x000000, 0xFFFFFF))
+
+        if json_id in settings and 'image_url' in settings[json_id] and \
+            settings[json_id]['image_url']:
+            embed.set_thumbnail(url=settings[json_id]['image_url'])
 
         return embed
 
