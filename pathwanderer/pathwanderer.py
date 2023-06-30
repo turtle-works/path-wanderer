@@ -17,6 +17,9 @@ AON_SEARCH_BASE = "https://2e.aonprd.com/Search.aspx?q="
 
 SPELL_SLOT_SYMBOL = "✦"
 
+KNOWN_FLAGS = ["ac", "b", "d", "dc", "phrase", "rr"]
+DOUBLE_QUOTES = ["\"", "“", "”"]
+
 # TODO: shouldn't there be a better way to store this somewhere?
 TYPE = 0
 ABILITY = 1
@@ -725,6 +728,46 @@ class PathWanderer(commands.Cog):
             damage_line += f" -> `{damage_roll.total * 2}`"
 
         return f"{attack_line}\n{damage_line}", attack_roll, damage_roll
+
+    def process_flags(self, flags_str: str):
+        # TODO: maybe make this its own class or something?
+        processed_flags = {}
+        flag_start = flags_str.find(" -")
+        while flag_start >= 0:
+            # skip two chars to start search at the first character of the actual flag
+            flag_end = flags_str.find(" ", flag_start + 2)
+            if flag_end >= 0:
+                flag = flags_str[flag_start + 2:flag_end]
+                # skip one char to start search after the space
+                if flag_end + 1 < len(flags_str) and flags_str[flag_end + 1] in DOUBLE_QUOTES:
+                    quote_locs = [flags_str.find(f"{q} -", flag_end + 1) for q in DOUBLE_QUOTES]
+                    if all([q < 0 for q in quote_locs]):
+                        flag_start = -1
+                    else:
+                        # lowest one that's nonnegative
+                        while -1 in quote_locs:
+                            quote_locs.remove(-1)
+                        # offset for the quotation mark
+                        flag_start = min(quote_locs) + 1
+                else:
+                    flag_start = flags_str.find(" -", flag_end)
+
+                if flag_start >= 0:
+                    arg = flags_str[flag_end:flag_start]
+                else:
+                    arg = flags_str[flag_end:]
+
+                arg = arg.strip()
+                if arg[0] in DOUBLE_QUOTES:
+                    arg = arg[1:-1]
+
+                if flag in KNOWN_FLAGS:
+                    if flag in processed_flags:
+                        processed_flags[flag].append(arg)
+                    else:
+                        processed_flags[flag] = [arg]
+
+        return processed_flags
 
     @commands.command(aliases=["pfspellbook", "pfspells", "spells"])
     async def spellbook(self, ctx):
