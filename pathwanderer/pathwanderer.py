@@ -113,6 +113,28 @@ ARMOR_DATA = {
     'Wooden Breastplate': (14, -2)
 }
 
+WORK_DC = 0
+TRAINED_PAY = 1
+FAILURE_PAY = 5
+WORK_DATA = {
+    'legal': {
+        3: [18, 40, 50, 60, 60, 7],
+        4: [19, 50, 60, 80, 80, 8],
+        5: [20, 60, 80, 100, 100, 9],
+        6: [22, 70, 100, 150, 150, 10],
+        7: [23, 80, 150, 200, 200, 15],
+        8: [24, 100, 200, 280, 280, 20]
+    },
+    'criminal': {
+        3: [18, 50, 60, 70, 70],
+        4: [19, 60, 70, 90, 90],
+        5: [20, 70, 90, 120, 120],
+        6: [22, 80, 120, 180, 180],
+        7: [23, 90, 180, 240, 240],
+        8: [24, 120, 240, 320, 320]
+    }
+}
+
 
 class PathWanderer(commands.Cog):
     """Cog that lets users do simple things for Pathfinder 2e."""
@@ -1167,6 +1189,7 @@ class PathWanderer(commands.Cog):
         return f"Unfortunately, I don't have access to data on {topic}. " + \
             f"I can help you look it up on the Archives of Nethys, though:\n{aon_link}"
 
+    # TODO: these should probably be refactored if possible?
     @commands.command()
     async def research(self, ctx, dtp: int, dc: int, *, query: str):
         """Spend downtime doing research.
@@ -1238,3 +1261,157 @@ class PathWanderer(commands.Cog):
             f"Total KP from this session: **{total_kp}**"
 
         await ctx.send(embed=embed)
+
+    @commands.command()
+    async def legalwork(self, ctx, dtp: int, level: int, *, query: str):
+        """Spend downtime doing legal work.
+
+        Bonuses can be added with the -b flag. Examples:
+        `[p]legalwork 2 3 medicine`
+        `[p]legalwork 8 4 crafting -b 2`
+        """
+        await self._work(ctx, dtp, level, query, 'legal')
+
+    @commands.command()
+    async def criminalwork(self, ctx, dtp: int, level: int, *, query: str):
+        """Spend downtime doing criminal work.
+
+        Bonuses can be added with the -b flag. Examples:
+        `[p]criminalwork 12 3 athletics`
+        `[p]criminalwork 4 5 intimidation -b 2`
+        """
+        await self._work(ctx, dtp, level, query, 'criminal')
+
+    async def _work(self, ctx, dtp: int, level: int, query: str, work_type: str):
+        json_id = await self.config.user(ctx.author).active_char()
+        if json_id is None:
+            await ctx.send("Set an active character first with `character setactive`.")
+            return
+
+        data = await self.config.user(ctx.author).characters()
+        char_data = data[json_id]['build']
+
+        dtp = min(dtp, 24)
+
+        query_parts = [p.strip() for p in query.split("-b")]
+
+        check_name = query_parts[0].lower()
+
+        skill_type, skill = self.find_skill_type(check_name, char_data)
+        if not skill_type:
+            await ctx.send(f"Could not interpret `{check_name}` as a check.")
+            return
+
+        if skill_type == "check":
+            mod = self._get_skill_mod(skill, char_data)
+            prof = char_data['proficiencies'][skill]
+        elif skill_type == "lore":
+            mod = self._get_lore_mod(skill, char_data)
+            prof = 2
+            for lore in char_data['lores']:
+                if lore[0] == skill:
+                    prof = lore[1]
+        else:
+            await ctx.send(f"Cannot use `{check_name}`.")
+            return
+
+        if prof < 2:
+            await ctx.send("You must be trained in a skill to use it for work.")
+            return
+
+        bonuses = sum([d20.roll(b).total for b in query_parts[1:]])
+
+        name = char_data['name']
+
+        embed = await self._get_base_embed(ctx)
+        embed.title = f"{name} gets to work!"
+
+        pay_rates = WORK_DATA[work_type][level]
+        dc = pay_rates[WORK_DC]
+
+        work_rolls = [d20.roll(self.make_dice_string(mod, bonuses)) for i in range(dtp)]
+        successes = []
+        for work_roll in work_rolls:
+            if work_roll.total >= dc + 10:
+                success = 2
+            elif work_roll.total >= dc:
+                success = 1
+            elif work_roll.total > dc - 10:
+                success = 0
+            else:
+                success = -1
+
+            if work_roll.crit == d20.CritType.CRIT:
+                success = min(2, success + 1)
+            elif work_roll.crit == d20.CritType.FAIL:
+                success = max(-1, success - 1)
+
+            successes.append(success)
+
+        payments = []
+        penalty_message = ""
+        for success in successes:
+            if success == 2:
+                increased_prof = min(8, prof + 2)
+                payments.append(pay_rates[int(increased_prof / 2)])
+            elif success == 1:
+                payments.append(pay_rates[int(prof / 2)])
+            elif success == 0:
+                if work_type == 'legal':
+                    payments.append(pay_rates[FAILURE_PAY])
+                else:
+                    payments.append(0)
+            else:
+                payments.append(0)
+
+        total_sp = sum(payments)
+
+        for i in range(dtp):
+            inline = True
+            work_field = str(work_rolls[i])
+            deduction = ""
+            if successes[i] == -1 and work_type == 'criminal':
+                inline = False
+                penalty = d20.roll("1d4")
+                penalty_message = f"\n**Penalty**: {str(penalty)}\n"
+                if penalty.total == 1:
+                    penalty_message += "You must pay penance for your crimes in the form " + \
+                        "of Jail Time or Community Service. You lose an additional DTP. "
+                elif penalty.total == 2:
+                    penalty_message += "You either need to pay someone off or get caught " + \
+                        "and need to pay a fine. You lose gold equal to the gold in the " + \
+                        "'Trained' column."
+                    deduction = f"-{pay_rates[TRAINED_PAY]}"
+                    total_sp -= pay_rates[TRAINED_PAY]
+                elif penalty.total == 3:
+                    penalty_message += "Rumors of your criminal activity have made it to " + \
+                        "the ears of important people. Lose 1 FP with the faction you " + \
+                        "have the most FP with. If there is a tie, you can choose between " + \
+                        "the tied factions."
+                else:
+                    penalty_message += "Something went wrong, and you got injured along " + \
+                        "the way. At the start of your next mission, you have taken 5 damage."
+                work_field += penalty_message
+
+            coins = self._get_parsed_coins(payments[i])
+            degree = "Crit Success" if successes[i] == 2 else "Success" if successes[i] == 1 else \
+                "Failure" if successes[i] == 0 else "Crit Failure"
+            field_title = f"DTP {i + 1}: {degree}, {coins if not deduction else deduction}"
+            embed.add_field(name=field_title, value=work_field, inline=inline)
+
+        if skill_type != "lore":
+            skill = skill.capitalize()
+
+        embed.description = f"DC {dc} {skill}\n" + \
+            f"Total pay from this session: **{self._get_parsed_coins(total_sp)}**"
+
+        await ctx.send(embed=embed)
+
+    def _get_parsed_coins(self, total_sp: int):
+        sp = total_sp % 10
+        gp = math.floor(total_sp / 10)
+
+        sp_str = f"{sp} sp" if sp else ""
+        gp_str = f"{gp} gp" if gp else ""
+
+        return f"{gp_str}, {sp_str}" if gp and sp else gp_str if gp else sp_str if sp else "0 gp"
