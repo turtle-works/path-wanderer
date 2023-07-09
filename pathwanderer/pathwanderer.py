@@ -379,11 +379,11 @@ class PathWanderer(commands.Cog):
         data = await self.config.user(ctx.author).characters()
         char_data = data[json_id]['build']
 
-        query_parts = [p.strip() for p in query.split("-b")]
+        processed_query = self.process_query(query)
 
-        check_name = query_parts[0].lower()
+        check_name = processed_query['query'].lower()
 
-        if check_name in "lore":
+        if check_name == "lore":
             await ctx.send("Please use a specific lore skill. Your options are: " + \
                 ", ".join([lore[0] for lore in char_data['lores']]))
             return
@@ -411,8 +411,7 @@ class PathWanderer(commands.Cog):
             await ctx.send(f"Could not understand `{check_name}`.")
             return
 
-        # feels a little hacky
-        bonuses = sum([d20.roll(b).total for b in query_parts[1:]])
+        bonuses = self._get_arg_total(processed_query['b'])
 
         name = char_data['name']
         article = "an" if skill[0] in ["a", "e", "i", "o", "u"] and not lore_indicator else "a"
@@ -437,9 +436,9 @@ class PathWanderer(commands.Cog):
         data = await self.config.user(ctx.author).characters()
         char_data = data[json_id]['build']
 
-        query_parts = [p.strip() for p in query.split("-b")]
+        processed_query = self.process_query(query)
 
-        save_name = query_parts[0].lower()
+        save_name = processed_query['query'].lower()
 
         skill_type, skill = self.find_skill_type(save_name, char_data)
         if not skill_type:
@@ -451,7 +450,7 @@ class PathWanderer(commands.Cog):
 
         mod = self._get_skill_mod(skill, char_data)
 
-        bonuses = sum([d20.roll(b).total for b in query_parts[1:]])
+        bonuses = self._get_arg_total(processed_query['b'])
 
         name = char_data['name']
 
@@ -557,13 +556,13 @@ class PathWanderer(commands.Cog):
         await self._attack(ctx, char_data, num_attacks, query)
 
     async def _attack(self, ctx, char_data: dict, num_attacks: int, query: str):
-        query_parts = [p.strip() for p in query.split("-b")]
+        processed_query = self.process_query(query)
 
-        weapon_query = query_parts[0]
+        weapon_query = processed_query['query'].lower()
 
         weapon = None
         for weap in char_data['weapons']:
-            if weapon_query.lower() in weap['display'].lower():
+            if weapon_query in weap['display'].lower():
                 weapon = weap
         if weapon is None:
             await ctx.send(f"Did not find `{weapon_query}` in available weapons.")
@@ -583,8 +582,7 @@ class PathWanderer(commands.Cog):
         num_dice = self._get_num_damage_dice(weapon['str'])
         die_size = int(weapon['die'].split("d")[1])
 
-        # TODO: uh oh. damage bonuses?
-        to_hit_bonus = sum([d20.roll(b).total for b in query_parts[1:]])
+        to_hit_bonus = self._get_arg_total(processed_query['b'])
 
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name} attacks with {article} {weapon['display']}!"
@@ -632,9 +630,9 @@ class PathWanderer(commands.Cog):
         data = await self.config.user(ctx.author).characters()
         char_data = data[json_id]['build']
 
-        query_parts = [p.strip() for p in query.split("-b")]
-        if query_parts and query_parts[0]:
-            weapon_query = query_parts[0]
+        processed_query = self.process_query(query)
+        if processed_query['query']:
+            weapon_query = processed_query['query'].lower()
         else:
             weapon_query = None
 
@@ -651,7 +649,7 @@ class PathWanderer(commands.Cog):
             weapon = None
             if weapon_query:
                 for weap in char_data['weapons']:
-                    if weapon_query.lower() in weap['display'].lower():
+                    if weapon_query in weap['display'].lower():
                         weapon = weap
                         csettings[json_id]['last_weapon'] = weapon
                 if weapon is None:
@@ -669,7 +667,7 @@ class PathWanderer(commands.Cog):
             num_dice = self._get_num_damage_dice(weapon['str'])
             die_size = int(weapon['die'].split("d")[1])
 
-            to_hit_bonus = sum([d20.roll(b).total for b in query_parts[1:]])
+            to_hit_bonus = self._get_arg_total(processed_query['b'])
 
             penalty = 4 if weapon['name'] in AGILE_WEAPONS else 5
             penalty = penalty * 2 if num_attacks > 1 else penalty if num_attacks > 0 else 0
@@ -751,18 +749,27 @@ class PathWanderer(commands.Cog):
 
         return f"{attack_line}\n{damage_line}", attack_roll, damage_roll
 
-    def process_flags(self, flags_str: str):
+    def process_query(self, query_str: str):
         # TODO: maybe make this its own class or something?
-        processed_flags = {}
-        flag_start = flags_str.find(" -")
+        processed_flags = self._get_base_flags()
+
+        flag_start = query_str.find(" -")
+
+        if flag_start < 0:
+            processed_flags['query'] = query_str
+        elif flag_start > 0:
+            processed_flags['query'] = query_str[:flag_start]
+        else:
+            processed_flags['query'] = ""
+
         while flag_start >= 0:
             # skip two chars to start search at the first character of the actual flag
-            flag_end = flags_str.find(" ", flag_start + 2)
+            flag_end = query_str.find(" ", flag_start + 2)
             if flag_end >= 0:
-                flag = flags_str[flag_start + 2:flag_end]
+                flag = query_str[flag_start + 2:flag_end]
                 # skip one char to start search after the space
-                if flag_end + 1 < len(flags_str) and flags_str[flag_end + 1] in DOUBLE_QUOTES:
-                    quote_locs = [flags_str.find(f"{q} -", flag_end + 1) for q in DOUBLE_QUOTES]
+                if flag_end + 1 < len(query_str) and query_str[flag_end + 1] in DOUBLE_QUOTES:
+                    quote_locs = [query_str.find(f"{q} -", flag_end + 1) for q in DOUBLE_QUOTES]
                     if all([q < 0 for q in quote_locs]):
                         flag_start = -1
                     else:
@@ -772,12 +779,12 @@ class PathWanderer(commands.Cog):
                         # offset for the quotation mark
                         flag_start = min(quote_locs) + 1
                 else:
-                    flag_start = flags_str.find(" -", flag_end)
+                    flag_start = query_str.find(" -", flag_end)
 
                 if flag_start >= 0:
-                    arg = flags_str[flag_end:flag_start]
+                    arg = query_str[flag_end:flag_start]
                 else:
-                    arg = flags_str[flag_end:]
+                    arg = query_str[flag_end:]
 
                 arg = arg.strip()
                 if arg[0] in DOUBLE_QUOTES:
@@ -790,6 +797,22 @@ class PathWanderer(commands.Cog):
                         processed_flags[flag] = [arg]
 
         return processed_flags
+
+    def _get_base_flags(self):
+        processed_flags = {'query': ""}
+        for flag in KNOWN_FLAGS:
+            processed_flags[flag] = []
+        return processed_flags
+
+    def _get_arg_total(self, args: list):
+        total = 0
+        for arg in args:
+            try:
+                total += d20.roll(arg).total
+            except:
+                # this wasn't rollable, interpret it as 0 (like draconic's roll() does)
+                total += 0
+        return total
 
     @commands.command(aliases=["pfspellbook", "pfspells", "spells"])
     async def spellbook(self, ctx):
@@ -1208,9 +1231,9 @@ class PathWanderer(commands.Cog):
 
         dtp = min(dtp, 24)
 
-        query_parts = [p.strip() for p in query.split("-b")]
+        processed_query = self.process_query(query)
 
-        check_name = query_parts[0].lower()
+        check_name = processed_query['query'].lower()
 
         skill_type, skill = self.find_skill_type(check_name, char_data)
         if not skill_type:
@@ -1227,7 +1250,7 @@ class PathWanderer(commands.Cog):
             await ctx.send(f"Could not understand `{check_name}`.")
             return
 
-        bonuses = sum([d20.roll(b).total for b in query_parts[1:]])
+        bonuses = self._get_arg_total(processed_query['b'])
 
         name = char_data['name']
 
@@ -1293,9 +1316,9 @@ class PathWanderer(commands.Cog):
 
         dtp = min(dtp, 24)
 
-        query_parts = [p.strip() for p in query.split("-b")]
+        processed_query = self.process_query(query)
 
-        check_name = query_parts[0].lower()
+        check_name = processed_query['query'].lower()
 
         skill_type, skill = self.find_skill_type(check_name, char_data)
         if not skill_type:
@@ -1319,7 +1342,7 @@ class PathWanderer(commands.Cog):
             await ctx.send("You must be trained in a skill to use it for work.")
             return
 
-        bonuses = sum([d20.roll(b).total for b in query_parts[1:]])
+        bonuses = self._get_arg_total(processed_query['b'])
 
         name = char_data['name']
 
