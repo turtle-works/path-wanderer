@@ -239,6 +239,14 @@ class PathWanderer(commands.Cog):
     @character.command(name="list")
     async def character_list(self, ctx):
         """List all characters that the user has imported."""
+        await self._character_list(ctx, False)
+
+    @character.command(name="ids")
+    async def character_ids(self, ctx):
+        """Receive a list of all the characters that the user has imported, with their JSON IDs."""
+        await self._character_list(ctx, True)
+
+    async def _character_list(self, ctx, show_ids: bool):
         characters = await self.config.user(ctx.author).characters()
         if not characters:
             await ctx.send("You have no characters.")
@@ -248,11 +256,19 @@ class PathWanderer(commands.Cog):
 
         lines = []
         for json_id in characters.keys():
-            line = f"{characters[json_id]['build']['name']}"
+            char_data = characters[json_id]['build']
+            line = f"{char_data['name']}"
+            line += f" ({char_data['class']} {char_data['level']})"
+            if show_ids:
+                line += f" (ID **{json_id}**)"
             line += " (**active**)" if json_id == active_id else ""
             lines.append(line)
 
-        await ctx.send("Your characters:\n" + "\n".join(sorted(lines)))
+        if not show_ids:
+            await ctx.send("Your characters:\n" + "\n".join(sorted(lines)))
+        else:
+            await ctx.author.send("Your characters:\n" + "\n".join(sorted(lines)))
+            await ctx.send("List has been sent to your DMs.")
 
     @character.command(name="setactive", aliases=["set", "switch"])
     async def character_set(self, ctx, *, query: str):
@@ -368,8 +384,18 @@ class PathWanderer(commands.Cog):
         characters = await self.config.user(ctx.author).characters()
 
         for json_id in characters.keys():
-            # either match to json id or partial match to a character name
-            if query == json_id or query in characters[json_id]['build']['name'].lower():
+            char_data = characters[json_id]['build']
+            name = char_data['name']
+            class_name = char_data['class']
+            level = char_data['level']
+
+            # TODO: this isn't great
+            # either match directly to json id or partial match to variations
+            if query == json_id or \
+                query in f"{name} ({class_name} {level})".lower() or \
+                query in f"{name} {class_name} {level}".lower() or \
+                query in f"{name} {level}".lower() or \
+                query in name.lower():
                 return json_id
 
         return None
