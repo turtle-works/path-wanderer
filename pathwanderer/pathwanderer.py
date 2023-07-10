@@ -1315,6 +1315,7 @@ class PathWanderer(commands.Cog):
         char_data = data[json_id]['build']
 
         dtp = min(dtp, 24)
+        level = min(max(level, 3), 8)
 
         processed_query = self.process_query(query)
 
@@ -1425,7 +1426,7 @@ class PathWanderer(commands.Cog):
         if skill_type != "lore":
             skill = skill.capitalize()
 
-        embed.description = f"DC {dc} {skill}\n" + \
+        embed.description = f"DC {dc} {skill} (Level {level})\n" + \
             f"Total pay from this session: **{self._get_parsed_coins(total_sp)}**"
 
         await ctx.send(embed=embed)
