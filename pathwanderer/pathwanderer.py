@@ -180,7 +180,13 @@ class PathWanderer(commands.Cog):
         json_id = char_url.split("=")[1]
         async with self.config.user(ctx.author).characters() as characters:
             if json_id in characters:
-                await ctx.send("This character has already been imported, use `update` instead.")
+                active_char = await self.config.user(ctx.author).active_char()
+                switch_msg = ""
+                if json_id != active_char:
+                    switch_msg = " switch to their sheet with `character setactive` and"
+
+                await ctx.send(f"This character has already been imported,{switch_msg} use " + \
+                    "`update` instead.")
                 return
 
         async with aiohttp.ClientSession() as session:
