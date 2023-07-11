@@ -780,52 +780,54 @@ class PathWanderer(commands.Cog):
 
         return f"{attack_line}\n{damage_line}", attack_roll, damage_roll
 
+    # TODO: maybe make this its own class or something?
     def process_query(self, query_str: str):
-        # TODO: maybe make this its own class or something?
         processed_flags = self._get_base_flags()
 
-        flag_start = query_str.find(" -")
+        flag_locs = []
+        search_start = 0
+        while search_start < len(query_str):
+            # looks for instances of all the flags simultaneously
+            next_flags = [query_str.find(f" -{flag} ", search_start) for flag in KNOWN_FLAGS]
 
-        if flag_start < 0:
+            # no more flags, end loop
+            if all([f < 0 for f in next_flags]):
+                break
+            # save location of earliest flag
+            else:
+                while -1 in next_flags:
+                    next_flags.remove(-1)
+                next_flag = min(next_flags)
+                flag_locs.append(next_flag)
+                search_start = next_flag + 2
+        flag_locs.sort()
+
+        if not flag_locs:
             processed_flags['query'] = query_str
-        elif flag_start > 0:
-            processed_flags['query'] = query_str[:flag_start]
         else:
-            processed_flags['query'] = ""
+            processed_flags['query'] = query_str[:flag_locs[0]]
 
-        while flag_start >= 0:
-            # skip two chars to start search at the first character of the actual flag
-            flag_end = query_str.find(" ", flag_start + 2)
-            if flag_end >= 0:
-                flag = query_str[flag_start + 2:flag_end]
-                # skip one char to start search after the space
-                if flag_end + 1 < len(query_str) and query_str[flag_end + 1] in DOUBLE_QUOTES:
-                    quote_locs = [query_str.find(f"{q} -", flag_end + 1) for q in DOUBLE_QUOTES]
-                    if all([q < 0 for q in quote_locs]):
-                        flag_start = -1
-                    else:
-                        # lowest one that's nonnegative
-                        while -1 in quote_locs:
-                            quote_locs.remove(-1)
-                        # offset for the quotation mark
-                        flag_start = min(quote_locs) + 1
-                else:
-                    flag_start = query_str.find(" -", flag_end)
+        for i in range(len(flag_locs)):
+            if i == len(flag_locs) - 1:
+                flag_and_arg = query_str[flag_locs[i]:]
+            else:
+                flag_and_arg = query_str[flag_locs[i]:flag_locs[i + 1]]
 
-                if flag_start >= 0:
-                    arg = query_str[flag_end:flag_start]
-                else:
-                    arg = query_str[flag_end:]
+            flag_and_arg = flag_and_arg.strip()[1:]
+            # split only on the first space, if it exists
+            flag_and_arg = flag_and_arg.split(" ", 1)
 
-                arg = arg.strip()
-                if arg[0] in DOUBLE_QUOTES:
-                    arg = arg[1:-1]
+            flag = flag_and_arg[0]
+            if len(flag_and_arg) > 1:
+                arg = flag_and_arg[1]
+            else:
+                arg = ""
 
-                if flag in KNOWN_FLAGS:
-                    if flag in processed_flags:
-                        processed_flags[flag].append(arg)
-                    else:
-                        processed_flags[flag] = [arg]
+            arg = arg.strip()
+            if len(arg) > 1 and arg[0] in DOUBLE_QUOTES and arg[-1] in DOUBLE_QUOTES:
+                arg = arg[1:-1]
+
+            processed_flags[flag].append(arg)
 
         return processed_flags
 
