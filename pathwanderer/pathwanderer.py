@@ -443,7 +443,7 @@ class PathWanderer(commands.Cog):
             await ctx.send(f"Could not understand `{check_name}`.")
             return
 
-        bonuses = self._get_arg_total(processed_query['b'])
+        bonus_str = self._get_rollable_arg(processed_query['b'])
 
         name = char_data['name']
         article = "an" if skill[0] in ["a", "e", "i", "o", "u"] and not lore_indicator else "a"
@@ -453,7 +453,7 @@ class PathWanderer(commands.Cog):
 
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name} makes {article} {lore_indicator}{skill} check!"
-        embed.description = str(d20.roll(self.make_dice_string(mod, bonuses)))
+        embed.description = str(d20.roll(self.make_dice_string(mod, bonus_str)))
 
         await ctx.send(embed=embed)
 
@@ -482,13 +482,13 @@ class PathWanderer(commands.Cog):
 
         mod = self._get_skill_mod(skill, char_data)
 
-        bonuses = self._get_arg_total(processed_query['b'])
+        bonus_str = self._get_rollable_arg(processed_query['b'])
 
         name = char_data['name']
 
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name} makes a {skill.capitalize()} save!"
-        embed.description = str(d20.roll(self.make_dice_string(mod, bonuses)))
+        embed.description = str(d20.roll(self.make_dice_string(mod, bonus_str)))
 
         await ctx.send(embed=embed)
 
@@ -537,12 +537,11 @@ class PathWanderer(commands.Cog):
 
         return ability_mod + prof_bonus
 
-    def make_dice_string(self, mod: int, bonuses: int, num_dice: int=1, die_size: int=20):
+    def make_dice_string(self, mod: int, bonus_str: str, num_dice: int=1, die_size: int=20):
         op = self._get_op(mod)
-        bonus_op = self._get_op(bonuses)
-        bonus_str = f" {bonus_op} {abs(bonuses)}" if bonuses else ""
+        bonus = f" + {bonus_str}" if bonus_str else ""
 
-        return f"{num_dice}d{die_size} {op} {abs(mod)}{bonus_str}"
+        return f"{num_dice}d{die_size} {op} {abs(mod)}{bonus}"
 
     def _get_op(self, value: int):
         return "-" if value < 0 else "+"
@@ -614,13 +613,13 @@ class PathWanderer(commands.Cog):
         num_dice = self._get_num_damage_dice(weapon['str'])
         die_size = int(weapon['die'].split("d")[1])
 
-        to_hit_bonus = self._get_arg_total(processed_query['b'])
+        to_hit_bonus_str = self._get_rollable_arg(processed_query['b'])
 
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name} attacks with {article} {weapon['display']}!"
 
         if num_attacks <= 1:
-            output, _, _ = self.make_attack_block(to_hit, damage_mod, to_hit_bonus, num_dice,
+            output, _, _ = self.make_attack_block(to_hit, damage_mod, to_hit_bonus_str, num_dice,
                 die_size=die_size or 1)
 
             embed.description = output
@@ -630,7 +629,7 @@ class PathWanderer(commands.Cog):
                 penalty = 4 if weapon['name'] in AGILE_WEAPONS else 5
                 penalty = penalty * 2 if i > 1 else penalty if i > 0 else 0
                 output, attack_roll, damage_roll = self.make_attack_block(to_hit - penalty,
-                    damage_mod, to_hit_bonus, num_dice, die_size=die_size or 1)
+                    damage_mod, to_hit_bonus_str, num_dice, die_size=die_size or 1)
                 if attack_roll.crit == d20.CritType.CRIT:
                     total_damage += damage_roll.total * 2
                 else:
@@ -699,11 +698,11 @@ class PathWanderer(commands.Cog):
             num_dice = self._get_num_damage_dice(weapon['str'])
             die_size = int(weapon['die'].split("d")[1])
 
-            to_hit_bonus = self._get_arg_total(processed_query['b'])
+            to_hit_bonus_str = self._get_rollable_arg(processed_query['b'])
 
             penalty = 4 if weapon['name'] in AGILE_WEAPONS else 5
             penalty = penalty * 2 if num_attacks > 1 else penalty if num_attacks > 0 else 0
-            output, _, _ = self.make_attack_block(to_hit - penalty, damage_mod, to_hit_bonus,
+            output, _, _ = self.make_attack_block(to_hit - penalty, damage_mod, to_hit_bonus_str,
                 num_dice, die_size=die_size or 1)
 
             csettings[json_id]['consecutive_attacks'] += 1
@@ -766,12 +765,12 @@ class PathWanderer(commands.Cog):
         else:
             return 1
 
-    def make_attack_block(self, to_hit: int, damage_mod: int, to_hit_bonus: int, num_dice: int,
+    def make_attack_block(self, to_hit: int, damage_mod: int, to_hit_bonus_str: str, num_dice: int,
         die_size: int):
-        attack_roll = d20.roll(self.make_dice_string(to_hit, to_hit_bonus))
+        attack_roll = d20.roll(self.make_dice_string(to_hit, to_hit_bonus_str))
         attack_line = f"**To hit**: {str(attack_roll)}"
 
-        damage_roll = d20.roll(self.make_dice_string(damage_mod, bonuses=0, num_dice=num_dice,
+        damage_roll = d20.roll(self.make_dice_string(damage_mod, bonuses="", num_dice=num_dice,
             die_size=die_size))
         damage_line = f"**Damage**: {str(damage_roll)}"
 
@@ -836,15 +835,17 @@ class PathWanderer(commands.Cog):
             processed_flags[flag] = []
         return processed_flags
 
-    def _get_arg_total(self, args: list):
-        total = 0
+    def _get_rollable_arg(self, args: list):
+        rollable_args = []
         for arg in args:
+            # feels hacky
             try:
-                total += d20.roll(arg).total
+                d20.roll(arg)
+                rollable_args.append(arg)
             except:
-                # this wasn't rollable, interpret it as 0 (like draconic's roll() does)
-                total += 0
-        return total
+                # this was invalid and not rollable, don't use it
+                pass
+        return " + ".join(rollable_args)
 
     @commands.command(aliases=["pfspellbook", "pfspells", "spells"])
     async def spellbook(self, ctx):
@@ -1282,7 +1283,7 @@ class PathWanderer(commands.Cog):
             await ctx.send(f"Could not understand `{check_name}`.")
             return
 
-        bonuses = self._get_arg_total(processed_query['b'])
+        bonus_str = self._get_rollable_arg(processed_query['b'])
 
         name = char_data['name']
 
@@ -1291,7 +1292,7 @@ class PathWanderer(commands.Cog):
 
         total_kp = 0
         for i in range(dtp):
-            research_roll = d20.roll(self.make_dice_string(mod, bonuses))
+            research_roll = d20.roll(self.make_dice_string(mod, bonus_str))
             if research_roll.total >= dc + 10:
                 kp = 2
             elif research_roll.total >= dc:
@@ -1375,7 +1376,7 @@ class PathWanderer(commands.Cog):
             await ctx.send("You must be trained in a skill to use it for work.")
             return
 
-        bonuses = self._get_arg_total(processed_query['b'])
+        bonus_str = self._get_rollable_arg(processed_query['b'])
 
         name = char_data['name']
 
@@ -1385,7 +1386,7 @@ class PathWanderer(commands.Cog):
         pay_rates = WORK_DATA[work_type][level]
         dc = pay_rates[WORK_DC]
 
-        work_rolls = [d20.roll(self.make_dice_string(mod, bonuses)) for i in range(dtp)]
+        work_rolls = [d20.roll(self.make_dice_string(mod, bonus_str)) for i in range(dtp)]
         successes = []
         for work_roll in work_rolls:
             if work_roll.total >= dc + 10:
