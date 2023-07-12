@@ -614,13 +614,14 @@ class PathWanderer(commands.Cog):
         die_size = int(weapon['die'].split("d")[1])
 
         to_hit_bonus_str = self._get_rollable_arg(processed_query['b'])
+        damage_bonus_str = self._get_rollable_arg(processed_query['d'])
 
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name} attacks with {article} {weapon['display']}!"
 
         if num_attacks <= 1:
-            output, _, _ = self.make_attack_block(to_hit, damage_mod, to_hit_bonus_str, num_dice,
-                die_size=die_size or 1)
+            output, _, _ = self.make_attack_block(to_hit, damage_mod, to_hit_bonus_str,
+                damage_bonus_str, num_dice, die_size=die_size or 1)
 
             embed.description = output
         else:
@@ -629,11 +630,13 @@ class PathWanderer(commands.Cog):
                 penalty = 4 if weapon['name'] in AGILE_WEAPONS else 5
                 penalty = penalty * 2 if i > 1 else penalty if i > 0 else 0
                 output, attack_roll, damage_roll = self.make_attack_block(to_hit - penalty,
-                    damage_mod, to_hit_bonus_str, num_dice, die_size=die_size or 1)
-                if attack_roll.crit == d20.CritType.CRIT:
-                    total_damage += damage_roll.total * 2
-                else:
-                    total_damage += damage_roll.total
+                    damage_mod, to_hit_bonus_str, damage_bonus_str, num_dice,
+                    die_size=die_size or 1)
+                # if attack_roll.crit == d20.CritType.CRIT:
+                #     total_damage += damage_roll.total * 2
+                # else:
+                #     total_damage += damage_roll.total
+                total_damage += damage_roll.total
                 embed.add_field(name=f"Attack {i + 1}", value=output)
 
             embed.description = f"Total damage: `{total_damage}`"
@@ -661,7 +664,7 @@ class PathWanderer(commands.Cog):
         data = await self.config.user(ctx.author).characters()
         char_data = data[json_id]['build']
 
-        processed_query = self.process_query(query)
+        processed_query = self.process_query(query, True)
         if processed_query['query']:
             weapon_query = processed_query['query'].lower()
         else:
@@ -699,11 +702,12 @@ class PathWanderer(commands.Cog):
             die_size = int(weapon['die'].split("d")[1])
 
             to_hit_bonus_str = self._get_rollable_arg(processed_query['b'])
+            damage_bonus_str = self._get_rollable_arg(processed_query['d'])
 
             penalty = 4 if weapon['name'] in AGILE_WEAPONS else 5
             penalty = penalty * 2 if num_attacks > 1 else penalty if num_attacks > 0 else 0
             output, _, _ = self.make_attack_block(to_hit - penalty, damage_mod, to_hit_bonus_str,
-                num_dice, die_size=die_size or 1)
+                damage_bonus_str, num_dice, die_size=die_size or 1)
 
             csettings[json_id]['consecutive_attacks'] += 1
 
@@ -765,24 +769,28 @@ class PathWanderer(commands.Cog):
         else:
             return 1
 
-    def make_attack_block(self, to_hit: int, damage_mod: int, to_hit_bonus_str: str, num_dice: int,
-        die_size: int):
+    def make_attack_block(self, to_hit: int, damage_mod: int, to_hit_bonus_str: str,
+        damage_bonus_str: str, num_dice: int, die_size: int):
         attack_roll = d20.roll(self.make_dice_string(to_hit, to_hit_bonus_str))
         attack_line = f"**To hit**: {str(attack_roll)}"
 
-        damage_roll = d20.roll(self.make_dice_string(damage_mod, bonuses="", num_dice=num_dice,
-            die_size=die_size))
+        damage_roll = d20.roll(self.make_dice_string(damage_mod, damage_bonus_str,
+            num_dice=num_dice, die_size=die_size))
         damage_line = f"**Damage**: {str(damage_roll)}"
 
-        if attack_roll.crit == d20.CritType.CRIT:
-            attack_line += " (**crit**)"
-            damage_line += f" -> `{damage_roll.total * 2}`"
+        # if attack_roll.crit == d20.CritType.CRIT:
+        #     attack_line += " (**crit**)"
+        #     damage_line += f" -> `{damage_roll.total * 2}`"
 
         return f"{attack_line}\n{damage_line}", attack_roll, damage_roll
 
     # TODO: maybe make this its own class or something?
-    def process_query(self, query_str: str):
+    def process_query(self, query_str: str, noquery: bool=False):
         processed_flags = self._get_base_flags()
+
+        if noquery:
+            # prepend a space so the flag finding will succeed. hey, if it works...
+            query_str = " " + query_str
 
         flag_locs = []
         search_start = 0
@@ -802,7 +810,9 @@ class PathWanderer(commands.Cog):
                 search_start = next_flag + 2
         flag_locs.sort()
 
-        if not flag_locs:
+        if noquery:
+            processed_flags['query'] = None
+        elif not flag_locs:
             processed_flags['query'] = query_str
         else:
             processed_flags['query'] = query_str[:flag_locs[0]]
