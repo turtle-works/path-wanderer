@@ -676,7 +676,7 @@ class PathWanderer(commands.Cog):
         data = await self.config.user(ctx.author).characters()
         char_data = data[json_id]['build']
 
-        processed_query = self.process_query(query, True)
+        processed_query = self.process_query(query)
         if processed_query['query']:
             weapon_query = processed_query['query'].lower()
         else:
@@ -826,12 +826,11 @@ class PathWanderer(commands.Cog):
         return degree
 
     # TODO: maybe make this its own class or something?
-    def process_query(self, query_str: str, noquery: bool=False):
+    def process_query(self, query_str: str):
         processed_flags = self._get_base_flags()
 
-        if noquery:
-            # prepend a space so the flag finding will succeed. hey, if it works...
-            query_str = " " + query_str
+        # prepend a space so the flag finding will succeed even with no query. hey, if it works...
+        query_str = " " + query_str
 
         flag_locs = []
         search_start = 0
@@ -851,12 +850,10 @@ class PathWanderer(commands.Cog):
                 search_start = next_flag + 2
         flag_locs.sort()
 
-        if noquery:
-            processed_flags['query'] = None
-        elif not flag_locs:
-            processed_flags['query'] = query_str
+        if not flag_locs:
+            processed_flags['query'] = query_str.strip()
         else:
-            processed_flags['query'] = query_str[:flag_locs[0]]
+            processed_flags['query'] = query_str[:flag_locs[0]].strip()
 
         for i in range(len(flag_locs)):
             if i == len(flag_locs) - 1:
