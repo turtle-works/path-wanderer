@@ -20,6 +20,11 @@ SPELL_SLOT_SYMBOL = "✦"
 KNOWN_FLAGS = ["ac", "b", "d", "dc", "phrase", "rr"]
 DOUBLE_QUOTES = ["\"", "“", "”"]
 
+CRIT_SUCCESS = 2
+SUCCESS = 1
+FAILURE = 0
+CRIT_FAILURE = -1
+
 # TODO: shouldn't there be a better way to store this somewhere?
 TYPE = 0
 ABILITY = 1
@@ -617,13 +622,14 @@ class PathWanderer(commands.Cog):
 
         to_hit_bonus_str = self._get_rollable_arg(processed_query['b'])
         damage_bonus_str = self._get_rollable_arg(processed_query['d'])
+        ac_str = self._get_single_rollable_arg(processed_query['ac'])
 
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name} attacks with {article} {weapon['display']}!"
 
         if num_attacks <= 1:
             output, _, _ = self.make_attack_block(to_hit, damage_mod, to_hit_bonus_str,
-                damage_bonus_str, num_dice, die_size=die_size or 1)
+                damage_bonus_str, ac_str, num_dice, die_size=die_size or 1)
 
             embed.description = output
         else:
@@ -632,13 +638,17 @@ class PathWanderer(commands.Cog):
                 penalty = 4 if weapon['name'] in AGILE_WEAPONS else 5
                 penalty = penalty * 2 if i > 1 else penalty if i > 0 else 0
                 output, attack_roll, damage_roll = self.make_attack_block(to_hit - penalty,
-                    damage_mod, to_hit_bonus_str, damage_bonus_str, num_dice,
+                    damage_mod, to_hit_bonus_str, damage_bonus_str, ac_str, num_dice,
                     die_size=die_size or 1)
-                # if attack_roll.crit == d20.CritType.CRIT:
-                #     total_damage += damage_roll.total * 2
-                # else:
-                #     total_damage += damage_roll.total
-                total_damage += damage_roll.total
+                if ac_str:
+                    ac = d20.roll(ac_str).total
+                    degree = self._get_degree_of_success(attack_roll.total, attack_roll.crit, ac)
+                    if degree == CRIT_SUCCESS:
+                        total_damage += damage_roll.total * 2
+                    elif degree == SUCCESS:
+                        total_damage += damage_roll.total
+                else:
+                    total_damage += damage_roll.total
                 embed.add_field(name=f"Attack {i + 1}", value=output)
 
             embed.description = f"Total damage: `{total_damage}`"
@@ -705,11 +715,12 @@ class PathWanderer(commands.Cog):
 
             to_hit_bonus_str = self._get_rollable_arg(processed_query['b'])
             damage_bonus_str = self._get_rollable_arg(processed_query['d'])
+            ac_str = self._get_single_rollable_arg(processed_query['ac'])
 
             penalty = 4 if weapon['name'] in AGILE_WEAPONS else 5
             penalty = penalty * 2 if num_attacks > 1 else penalty if num_attacks > 0 else 0
             output, _, _ = self.make_attack_block(to_hit - penalty, damage_mod, to_hit_bonus_str,
-                damage_bonus_str, num_dice, die_size=die_size or 1)
+                damage_bonus_str, ac_str, num_dice, die_size=die_size or 1)
 
             csettings[json_id]['consecutive_attacks'] += 1
 
@@ -772,7 +783,7 @@ class PathWanderer(commands.Cog):
             return 1
 
     def make_attack_block(self, to_hit: int, damage_mod: int, to_hit_bonus_str: str,
-        damage_bonus_str: str, num_dice: int, die_size: int):
+        damage_bonus_str: str, ac_str: str, num_dice: int, die_size: int):
         attack_roll = d20.roll(self.make_dice_string(to_hit, to_hit_bonus_str))
         attack_line = f"**To hit**: {str(attack_roll)}"
 
@@ -780,11 +791,39 @@ class PathWanderer(commands.Cog):
             num_dice=num_dice, die_size=die_size))
         damage_line = f"**Damage**: {str(damage_roll)}"
 
-        # if attack_roll.crit == d20.CritType.CRIT:
-        #     attack_line += " (**crit**)"
-        #     damage_line += f" -> `{damage_roll.total * 2}`"
+        if ac_str:
+            ac = d20.roll(ac_str).total
+            attack_line = f"**To hit (AC {ac})**: {str(attack_roll)}"
+            degree = self._get_degree_of_success(attack_roll.total, attack_roll.crit, ac)
+
+            if degree == CRIT_SUCCESS:
+                attack_line += " (**crit**)"
+            elif degree == CRIT_FAILURE:
+                attack_line += " (**crit fail**)"
+
+            if degree == CRIT_SUCCESS:
+                damage_line += f" -> `{damage_roll.total * 2}`"
+            elif degree <= FAILURE:
+                damage_line = "**Miss!**"
 
         return f"{attack_line}\n{damage_line}", attack_roll, damage_roll
+
+    def _get_degree_of_success(self, total: int, crit: int, dc: int):
+        if total >= dc + 10:
+            degree = CRIT_SUCCESS
+        elif total >= dc:
+            degree = SUCCESS
+        elif total > dc - 10:
+            degree = FAILURE
+        else:
+            degree = CRIT_FAILURE
+
+        if crit == d20.CritType.CRIT:
+            degree = min(CRIT_SUCCESS, degree + 1)
+        elif crit == d20.CritType.FAIL:
+            degree = max(CRIT_FAILURE, degree - 1)
+
+        return degree
 
     # TODO: maybe make this its own class or something?
     def process_query(self, query_str: str, noquery: bool=False):
@@ -848,6 +887,14 @@ class PathWanderer(commands.Cog):
         for flag in KNOWN_FLAGS:
             processed_flags[flag] = []
         return processed_flags
+
+    def _get_single_rollable_arg(self, args: list):
+        try:
+            d20.roll(args[0])
+            return args[0]
+        # should catch both empty list and not rollable
+        except:
+            return ""
 
     def _get_rollable_arg(self, args: list):
         rollable_args = []
@@ -1307,20 +1354,17 @@ class PathWanderer(commands.Cog):
         total_kp = 0
         for i in range(dtp):
             research_roll = d20.roll(self.make_dice_string(mod, bonus_str))
-            if research_roll.total >= dc + 10:
+            degree = self._get_degree_of_success(research_roll.total, research_roll.crit, dc)
+            if degree == CRIT_SUCCESS:
                 kp = 2
-            elif research_roll.total >= dc:
+            elif degree == SUCCESS:
                 kp = 1
-            elif research_roll.total > dc - 10:
+            elif degree == FAILURE:
                 kp = 0
             else:
                 # kp = -1
                 kp = 0
 
-            if research_roll.crit == d20.CritType.CRIT:
-                kp = min(2, kp + 1)
-            # elif research_roll.crit == d20.CritType.FAIL:
-            #     kp = max(-1, kp - 1)
             total_kp += kp
             embed.add_field(name=f"DTP {i + 1}: {kp} KP", value=str(research_roll))
 
@@ -1403,31 +1447,17 @@ class PathWanderer(commands.Cog):
         work_rolls = [d20.roll(self.make_dice_string(mod, bonus_str)) for i in range(dtp)]
         successes = []
         for work_roll in work_rolls:
-            if work_roll.total >= dc + 10:
-                success = 2
-            elif work_roll.total >= dc:
-                success = 1
-            elif work_roll.total > dc - 10:
-                success = 0
-            else:
-                success = -1
-
-            if work_roll.crit == d20.CritType.CRIT:
-                success = min(2, success + 1)
-            elif work_roll.crit == d20.CritType.FAIL:
-                success = max(-1, success - 1)
-
-            successes.append(success)
+            successes.append(self._get_degree_of_success(work_roll.total, work_roll.crit, dc))
 
         payments = []
         penalty_message = ""
         for success in successes:
-            if success == 2:
+            if success == CRIT_SUCCESS:
                 increased_prof = min(8, prof + 2)
                 payments.append(pay_rates[int(increased_prof / 2)])
-            elif success == 1:
+            elif success == SUCCESS:
                 payments.append(pay_rates[int(prof / 2)])
-            elif success == 0:
+            elif success == FAILURE:
                 if work_type == 'legal':
                     payments.append(pay_rates[FAILURE_PAY])
                 else:
@@ -1441,7 +1471,7 @@ class PathWanderer(commands.Cog):
             inline = True
             work_field = str(work_rolls[i])
             deduction = ""
-            if successes[i] == -1 and work_type == 'criminal':
+            if successes[i] == CRIT_FAILURE and work_type == 'criminal':
                 inline = False
                 penalty = d20.roll("1d4")
                 penalty_message = f"\n**Penalty**: {str(penalty)}\n"
@@ -1465,8 +1495,9 @@ class PathWanderer(commands.Cog):
                 work_field += penalty_message
 
             coins = self._get_parsed_coins(payments[i])
-            degree = "Crit Success" if successes[i] == 2 else "Success" if successes[i] == 1 else \
-                "Failure" if successes[i] == 0 else "Crit Failure"
+            degree = "Crit Success" if successes[i] == CRIT_SUCCESS else \
+                "Success" if successes[i] == SUCCESS else \
+                "Failure" if successes[i] == FAILURE else "Crit Failure"
             field_title = f"DTP {i + 1}: {degree}, {coins if not deduction else deduction}"
             embed.add_field(name=field_title, value=work_field, inline=inline)
 
