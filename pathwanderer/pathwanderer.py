@@ -204,7 +204,8 @@ class PathWanderer(commands.Cog):
 
         await self.config.user(ctx.author).active_char.set(json_id)
 
-        await ctx.send(f"Imported data for {char_data['build']['name']}.")
+        await ctx.send(f"Imported data for {char_data['build']['name']} " + \
+            f"({char_data['build']['class']} {char_data['build']['level']}).")
 
     @commands.command(aliases=["pfupdate"])
     async def update(self, ctx):
@@ -229,7 +230,8 @@ class PathWanderer(commands.Cog):
         async with self.config.user(ctx.author).characters() as characters:
             characters[json_id] = char_data
 
-        await ctx.send(f"Updated data for {char_data['build']['name']}. " + \
+        await ctx.send(f"Updated data for {char_data['build']['name']} " + \
+            f"({char_data['build']['class']} {char_data['build']['level']}). " + \
             f"(Note that changes cannot be pulled until Export JSON is selected again.)")
 
     @commands.group(aliases=["char", "pfchar"])
