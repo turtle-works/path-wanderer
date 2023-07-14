@@ -451,6 +451,7 @@ class PathWanderer(commands.Cog):
             return
 
         bonus_str = self._get_rollable_arg(processed_query['b'])
+        repetition_str = self._get_single_rollable_arg(processed_query['rr'])
 
         name = char_data['name']
         article = "an" if skill[0] in ["a", "e", "i", "o", "u"] and not lore_indicator else "a"
@@ -460,7 +461,13 @@ class PathWanderer(commands.Cog):
 
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name} makes {article} {lore_indicator}{skill} check!"
-        embed.description = str(d20.roll(self.make_dice_string(mod, bonus_str)))
+
+        if not repetition_str or d20.roll(repetition_str).total == 1:
+            embed.description = str(d20.roll(self.make_dice_string(mod, bonus_str)))
+        else:
+            for i in range(d20.roll(repetition_str).total):
+                roll_field = str(d20.roll(self.make_dice_string(mod, bonus_str)))
+                embed.add_field(name=f"Check {i + 1}", value=roll_field)
 
         await ctx.send(embed=embed)
 
@@ -490,12 +497,19 @@ class PathWanderer(commands.Cog):
         mod = self._get_skill_mod(skill, char_data)
 
         bonus_str = self._get_rollable_arg(processed_query['b'])
+        repetition_str = self._get_single_rollable_arg(processed_query['rr'])
 
         name = char_data['name']
 
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name} makes a {skill.capitalize()} save!"
-        embed.description = str(d20.roll(self.make_dice_string(mod, bonus_str)))
+
+        if not repetition_str or d20.roll(repetition_str).total == 1:
+            embed.description = str(d20.roll(self.make_dice_string(mod, bonus_str)))
+        else:
+            for i in range(d20.roll(repetition_str).total):
+                roll_field = str(d20.roll(self.make_dice_string(mod, bonus_str)))
+                embed.add_field(name=f"Save {i + 1}", value=roll_field)
 
         await ctx.send(embed=embed)
 
