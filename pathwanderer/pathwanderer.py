@@ -1095,7 +1095,7 @@ class PathWanderer(commands.Cog):
         else:
             return 0
 
-    @commands.command()
+    @commands.command(aliases=["checkpenalty"])
     async def armorpenalty(self, ctx, setting: str=""):
         """Toggle if the armor check penalty will apply to your characters."""
         if setting and setting.lower() not in ["off", "on"]:
