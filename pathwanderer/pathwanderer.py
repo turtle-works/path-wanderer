@@ -1526,7 +1526,7 @@ class PathWanderer(commands.Cog):
                     penalty_message += "You either need to pay someone off or get caught " + \
                         "and need to pay a fine. You lose gold equal to the gold in the " + \
                         "'Trained' column."
-                    deduction = f"-{pay_rates[TRAINED_PAY]}"
+                    deduction = f"-{self._get_parsed_coins(pay_rates[TRAINED_PAY])}"
                     total_sp -= pay_rates[TRAINED_PAY]
                 elif penalty.total == 3:
                     penalty_message += "Rumors of your criminal activity have made it to " + \
