@@ -451,6 +451,7 @@ class PathWanderer(commands.Cog):
             return
 
         bonus_str = self._get_rollable_arg(processed_query['b'])
+        dc_str = self._get_single_rollable_arg(processed_query['dc'])
         repetition_str = self._get_single_rollable_arg(processed_query['rr'])
 
         name = char_data['name']
@@ -463,11 +464,23 @@ class PathWanderer(commands.Cog):
         embed.title = f"{name} makes {article} {lore_indicator}{skill} check!"
 
         if not repetition_str or d20.roll(repetition_str).total == 1:
-            embed.description = str(d20.roll(self.make_dice_string(mod, bonus_str)))
+            check_roll = d20.roll(self.make_dice_string(mod, bonus_str))
+            description = str(check_roll)
+            if dc_str:
+                dc = d20.roll(dc_str).total
+                _, label = self._get_degree_of_success(check_roll.total, check_roll.crit, dc)
+                description = f"**DC {dc} | {label}**\n{description}"
+            embed.description = description
         else:
             for i in range(d20.roll(repetition_str).total):
-                roll_field = str(d20.roll(self.make_dice_string(mod, bonus_str)))
-                embed.add_field(name=f"Check {i + 1}", value=roll_field)
+                check_roll = d20.roll(self.make_dice_string(mod, bonus_str))
+                field_name = f"Check {i + 1}"
+                if dc_str:
+                    dc = d20.roll(dc_str).total
+                    embed.description = f"**DC {dc}**"
+                    _, label = self._get_degree_of_success(check_roll.total, check_roll.crit, dc)
+                    field_name += f", {label}"
+                embed.add_field(name=field_name, value=str(check_roll))
 
         await ctx.send(embed=embed)
 
@@ -497,6 +510,7 @@ class PathWanderer(commands.Cog):
         mod = self._get_skill_mod(skill, char_data)
 
         bonus_str = self._get_rollable_arg(processed_query['b'])
+        dc_str = self._get_single_rollable_arg(processed_query['dc'])
         repetition_str = self._get_single_rollable_arg(processed_query['rr'])
 
         name = char_data['name']
@@ -505,11 +519,23 @@ class PathWanderer(commands.Cog):
         embed.title = f"{name} makes a {skill.capitalize()} save!"
 
         if not repetition_str or d20.roll(repetition_str).total == 1:
-            embed.description = str(d20.roll(self.make_dice_string(mod, bonus_str)))
+            save_roll = d20.roll(self.make_dice_string(mod, bonus_str))
+            description = str(save_roll)
+            if dc_str:
+                dc = d20.roll(dc_str).total
+                _, label = self._get_degree_of_success(save_roll.total, save_roll.crit, dc)
+                description = f"**DC {dc} | {label}**\n{description}"
+            embed.description = description
         else:
             for i in range(d20.roll(repetition_str).total):
-                roll_field = str(d20.roll(self.make_dice_string(mod, bonus_str)))
-                embed.add_field(name=f"Save {i + 1}", value=roll_field)
+                save_roll = d20.roll(self.make_dice_string(mod, bonus_str))
+                field_name = f"Save {i + 1}"
+                if dc_str:
+                    dc = d20.roll(dc_str).total
+                    embed.description = f"**DC {dc}**"
+                    _, label = self._get_degree_of_success(save_roll.total, save_roll.crit, dc)
+                    field_name += f", {label}"
+                embed.add_field(name=field_name, value=str(save_roll))
 
         await ctx.send(embed=embed)
 
@@ -634,9 +660,9 @@ class PathWanderer(commands.Cog):
         num_dice = self._get_num_damage_dice(weapon['str'])
         die_size = int(weapon['die'].split("d")[1])
 
+        ac_str = self._get_single_rollable_arg(processed_query['ac'])
         to_hit_bonus_str = self._get_rollable_arg(processed_query['b'])
         damage_bonus_str = self._get_rollable_arg(processed_query['d'])
-        ac_str = self._get_single_rollable_arg(processed_query['ac'])
 
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name} attacks with {article} {weapon['display']}!"
@@ -656,7 +682,8 @@ class PathWanderer(commands.Cog):
                     die_size=die_size or 1)
                 if ac_str:
                     ac = d20.roll(ac_str).total
-                    degree = self._get_degree_of_success(attack_roll.total, attack_roll.crit, ac)
+                    degree, _ = self._get_degree_of_success(attack_roll.total, attack_roll.crit,
+                        ac)
                     if degree == CRIT_SUCCESS:
                         total_damage += damage_roll.total * 2
                     elif degree == SUCCESS:
@@ -727,9 +754,9 @@ class PathWanderer(commands.Cog):
             num_dice = self._get_num_damage_dice(weapon['str'])
             die_size = int(weapon['die'].split("d")[1])
 
+            ac_str = self._get_single_rollable_arg(processed_query['ac'])
             to_hit_bonus_str = self._get_rollable_arg(processed_query['b'])
             damage_bonus_str = self._get_rollable_arg(processed_query['d'])
-            ac_str = self._get_single_rollable_arg(processed_query['ac'])
 
             penalty = 4 if weapon['name'] in AGILE_WEAPONS else 5
             penalty = penalty * 2 if num_attacks > 1 else penalty if num_attacks > 0 else 0
@@ -808,7 +835,7 @@ class PathWanderer(commands.Cog):
         if ac_str:
             ac = d20.roll(ac_str).total
             attack_line = f"**To hit (AC {ac})**: {str(attack_roll)}"
-            degree = self._get_degree_of_success(attack_roll.total, attack_roll.crit, ac)
+            degree, _ = self._get_degree_of_success(attack_roll.total, attack_roll.crit, ac)
 
             if degree == CRIT_SUCCESS:
                 attack_line += " (**crit**)"
@@ -837,7 +864,10 @@ class PathWanderer(commands.Cog):
         elif crit == d20.CritType.FAIL:
             degree = max(CRIT_FAILURE, degree - 1)
 
-        return degree
+        label = "Crit Success" if degree == CRIT_SUCCESS else "Success" if degree == SUCCESS else \
+            "Failure" if degree == FAILURE else "Crit Failure"
+
+        return degree, label
 
     # TODO: maybe make this its own class or something?
     def process_query(self, query_str: str):
@@ -1365,7 +1395,7 @@ class PathWanderer(commands.Cog):
         total_kp = 0
         for i in range(dtp):
             research_roll = d20.roll(self.make_dice_string(mod, bonus_str))
-            degree = self._get_degree_of_success(research_roll.total, research_roll.crit, dc)
+            degree, _ = self._get_degree_of_success(research_roll.total, research_roll.crit, dc)
             if degree == CRIT_SUCCESS:
                 kp = 2
             elif degree == SUCCESS:
@@ -1457,8 +1487,11 @@ class PathWanderer(commands.Cog):
 
         work_rolls = [d20.roll(self.make_dice_string(mod, bonus_str)) for i in range(dtp)]
         successes = []
+        labels = []
         for work_roll in work_rolls:
-            successes.append(self._get_degree_of_success(work_roll.total, work_roll.crit, dc))
+            degree, label = self._get_degree_of_success(work_roll.total, work_roll.crit, dc)
+            successes.append(degree)
+            labels.append(label)
 
         payments = []
         penalty_message = ""
@@ -1506,10 +1539,8 @@ class PathWanderer(commands.Cog):
                 work_field += penalty_message
 
             coins = self._get_parsed_coins(payments[i])
-            degree = "Crit Success" if successes[i] == CRIT_SUCCESS else \
-                "Success" if successes[i] == SUCCESS else \
-                "Failure" if successes[i] == FAILURE else "Crit Failure"
-            field_title = f"DTP {i + 1}: {degree}, {coins if not deduction else deduction}"
+            label = labels[i]
+            field_title = f"DTP {i + 1}: {label}, {coins if not deduction else deduction}"
             embed.add_field(name=field_title, value=work_field, inline=inline)
 
         if skill_type != "lore":
