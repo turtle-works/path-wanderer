@@ -1225,6 +1225,7 @@ class PathWanderer(commands.Cog):
 
         name = char_data['name']
         heritage = char_data['heritage']
+        level = char_data['level']
 
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name}'s Feats and Specials"
@@ -1233,7 +1234,17 @@ class PathWanderer(commands.Cog):
         # list of four values: name, additional information, type, level
         for feat in char_data['feats']:
             if feat[2] != "Heritage":
-                bonus = f" ({feat[1]})" if feat[1] else ""
+                if feat[0] == "Assurance":
+                    if feat[1].lower() in SKILL_DATA.keys():
+                        prof = char_data['proficiencies'][feat[1].lower()] + level
+                        skill = feat[1]
+                    else:
+                        prof = self._get_lore_mod(feat[1][6:], char_data) - \
+                            self._get_ability_mod(char_data['abilities']['int'])
+                        skill = feat[1][6:]
+                    bonus = f" ({self._get_prof_label(prof - level)}{10 + prof} {skill})"
+                else:
+                    bonus = f" ({feat[1]})" if feat[1] else ""
                 feat_lines.append(f"{feat[0]}{bonus}")
         feat_lines.sort()
         feats_field = "\n".join(feat_lines)
@@ -1241,13 +1252,46 @@ class PathWanderer(commands.Cog):
         
         special_lines = []
         for special in char_data['specials']:
-            # show heritage under specials
+            # label heritage under specials
             special_lines.append(f"{special}{' (Heritage)' if special == heritage else ''}")
         special_lines.sort()
         specials_field = "\n".join(special_lines)
         embed.add_field(name="Specials", value=specials_field)
 
         await ctx.send(embed=embed)
+
+    @commands.command(aliases=["assurances"])
+    async def assurance(self, ctx):
+        """List the active character's Assurance skills, if they have any."""
+        json_id = await self.config.user(ctx.author).active_char()
+        if json_id is None:
+            await ctx.send("Set an active character first with `character setactive`.")
+            return
+
+        data = await self.config.user(ctx.author).characters()
+        char_data = data[json_id]['build']
+
+        name = char_data['name']
+        level = char_data['level']
+
+        assurances = []
+        for feat in char_data['feats']:
+            if feat[0] == "Assurance":
+                if feat[1].lower() in SKILL_DATA.keys():
+                    prof = char_data['proficiencies'][feat[1].lower()] + level
+                    skill = feat[1]
+                else:
+                    prof = self._get_lore_mod(feat[1][6:], char_data) - \
+                        self._get_ability_mod(char_data['abilities']['int'])
+                    skill = feat[1][6:]
+                assurances.append(f"{self._get_prof_label(prof - level)}{10 + prof} {skill}")
+
+        if not assurances:
+            await ctx.send("This character does not have the Assurance feat.")
+            return
+        else:
+            plural = "s" if len(assurances) > 1 else ""
+            await ctx.send(f"{name}'s Assurance skill{plural}:\n" + "\n".join(assurances))
 
     @commands.command(aliases=["equip", "equipment", "inventory"])
     async def gear(self, ctx):
