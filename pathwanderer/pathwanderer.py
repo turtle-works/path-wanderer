@@ -463,21 +463,22 @@ class PathWanderer(commands.Cog):
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name} makes {article} {lore_indicator}{skill} check!"
 
+        dc = d20.roll(dc_str).total if dc_str else None
+
         if not repetition_str or d20.roll(repetition_str).total == 1:
             check_roll = d20.roll(self.make_dice_string(mod, bonus_str))
             description = str(check_roll)
-            if dc_str:
-                dc = d20.roll(dc_str).total
+            if dc is not None:
                 _, label = self._get_degree_of_success(check_roll.total, check_roll.crit, dc)
                 description = f"**DC {dc} | {label}**\n{description}"
             embed.description = description
         else:
+            if dc is not None:
+                embed.description = f"**DC {dc}**"
             for i in range(d20.roll(repetition_str).total):
                 check_roll = d20.roll(self.make_dice_string(mod, bonus_str))
                 field_name = f"Check {i + 1}"
-                if dc_str:
-                    dc = d20.roll(dc_str).total
-                    embed.description = f"**DC {dc}**"
+                if dc is not None:
                     _, label = self._get_degree_of_success(check_roll.total, check_roll.crit, dc)
                     field_name += f", {label}"
                 embed.add_field(name=field_name, value=str(check_roll))
@@ -518,21 +519,22 @@ class PathWanderer(commands.Cog):
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name} makes a {skill.capitalize()} save!"
 
+        dc = d20.roll(dc_str).total if dc_str else None
+
         if not repetition_str or d20.roll(repetition_str).total == 1:
             save_roll = d20.roll(self.make_dice_string(mod, bonus_str))
             description = str(save_roll)
-            if dc_str:
-                dc = d20.roll(dc_str).total
+            if dc is not None:
                 _, label = self._get_degree_of_success(save_roll.total, save_roll.crit, dc)
                 description = f"**DC {dc} | {label}**\n{description}"
             embed.description = description
         else:
+            if dc is not None:
+                embed.description = f"**DC {dc}**"
             for i in range(d20.roll(repetition_str).total):
                 save_roll = d20.roll(self.make_dice_string(mod, bonus_str))
                 field_name = f"Save {i + 1}"
-                if dc_str:
-                    dc = d20.roll(dc_str).total
-                    embed.description = f"**DC {dc}**"
+                if dc is not None:
                     _, label = self._get_degree_of_success(save_roll.total, save_roll.crit, dc)
                     field_name += f", {label}"
                 embed.add_field(name=field_name, value=str(save_roll))
@@ -1520,6 +1522,7 @@ class PathWanderer(commands.Cog):
             return
 
         bonus_str = self._get_rollable_arg(processed_query['b'])
+        dc_str = self._get_single_rollable_arg(processed_query['dc'])
 
         name = char_data['name']
 
@@ -1527,7 +1530,7 @@ class PathWanderer(commands.Cog):
         embed.title = f"{name} gets to work!"
 
         pay_rates = WORK_DATA[work_type][level]
-        dc = pay_rates[WORK_DC]
+        dc = pay_rates[WORK_DC] if not dc_str else d20.roll(dc_str).total
 
         work_rolls = [d20.roll(self.make_dice_string(mod, bonus_str)) for i in range(dtp)]
         successes = []
