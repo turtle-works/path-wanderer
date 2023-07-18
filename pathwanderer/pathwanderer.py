@@ -452,6 +452,8 @@ class PathWanderer(commands.Cog):
 
         bonus_str = self._get_rollable_arg(processed_query['b'])
         dc_str = self._get_single_rollable_arg(processed_query['dc'])
+        # TODO: clean text?
+        phrase_str = "\n".join(processed_query['phrase'])
         repetition_str = self._get_single_rollable_arg(processed_query['rr'])
 
         name = char_data['name']
@@ -483,6 +485,9 @@ class PathWanderer(commands.Cog):
                     field_name += f", {label}"
                 embed.add_field(name=field_name, value=str(check_roll))
 
+        if phrase_str:
+            embed.description += f"\n*{phrase_str}*"
+
         await ctx.send(embed=embed)
 
     @commands.command(aliases=["s", "pfs", "pfsave"])
@@ -512,6 +517,7 @@ class PathWanderer(commands.Cog):
 
         bonus_str = self._get_rollable_arg(processed_query['b'])
         dc_str = self._get_single_rollable_arg(processed_query['dc'])
+        phrase_str = "\n".join(processed_query['phrase'])
         repetition_str = self._get_single_rollable_arg(processed_query['rr'])
 
         name = char_data['name']
@@ -538,6 +544,9 @@ class PathWanderer(commands.Cog):
                     _, label = self._get_degree_of_success(save_roll.total, save_roll.crit, dc)
                     field_name += f", {label}"
                 embed.add_field(name=field_name, value=str(save_roll))
+
+        if phrase_str:
+            embed.description += f"\n*{phrase_str}*"
 
         await ctx.send(embed=embed)
 
