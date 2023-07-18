@@ -473,10 +473,19 @@ class PathWanderer(commands.Cog):
             if dc is not None:
                 _, label = self._get_degree_of_success(check_roll.total, check_roll.crit, dc)
                 description = f"**DC {dc} | {label}**\n{description}"
-            embed.description = description
+
+            if phrase_str:
+                embed.description = f"{description}\n*{phrase_str}*"
+            else:
+                embed.description = description
         else:
-            if dc is not None:
+            if dc and phrase_str:
+                embed.description = f"**DC {dc}**\n*{phrase_str}*"
+            elif dc:
                 embed.description = f"**DC {dc}**"
+            elif phrase_str:
+                embed.description = f"*{phrase_str}*"
+
             for i in range(d20.roll(repetition_str).total):
                 check_roll = d20.roll(self.make_dice_string(mod, bonus_str))
                 field_name = f"Check {i + 1}"
@@ -484,9 +493,6 @@ class PathWanderer(commands.Cog):
                     _, label = self._get_degree_of_success(check_roll.total, check_roll.crit, dc)
                     field_name += f", {label}"
                 embed.add_field(name=field_name, value=str(check_roll))
-
-        if phrase_str:
-            embed.description += f"\n*{phrase_str}*"
 
         await ctx.send(embed=embed)
 
@@ -533,10 +539,19 @@ class PathWanderer(commands.Cog):
             if dc is not None:
                 _, label = self._get_degree_of_success(save_roll.total, save_roll.crit, dc)
                 description = f"**DC {dc} | {label}**\n{description}"
-            embed.description = description
+
+            if phrase_str:
+                embed.description = f"{description}\n*{phrase_str}*"
+            else:
+                embed.description = description
         else:
-            if dc is not None:
+            if dc and phrase_str:
+                embed.description = f"**DC {dc}**\n*{phrase_str}*"
+            elif dc:
                 embed.description = f"**DC {dc}**"
+            elif phrase_str:
+                embed.description = f"*{phrase_str}*"
+
             for i in range(d20.roll(repetition_str).total):
                 save_roll = d20.roll(self.make_dice_string(mod, bonus_str))
                 field_name = f"Save {i + 1}"
@@ -544,9 +559,6 @@ class PathWanderer(commands.Cog):
                     _, label = self._get_degree_of_success(save_roll.total, save_roll.crit, dc)
                     field_name += f", {label}"
                 embed.add_field(name=field_name, value=str(save_roll))
-
-        if phrase_str:
-            embed.description += f"\n*{phrase_str}*"
 
         await ctx.send(embed=embed)
 
