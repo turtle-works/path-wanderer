@@ -565,11 +565,19 @@ class PathWanderer(commands.Cog):
         abilities = char_data['abilities']
         level = char_data['level']
         profs = char_data['proficiencies']
+        misc_mods = char_data['mods']
 
         ability_mod = self._get_ability_mod(abilities[SKILL_DATA[skill][ABILITY]])
         prof_bonus = profs[skill] + (0 if profs[skill] == 0 else level)
 
-        return ability_mod + prof_bonus
+        # TODO: no guarantee what format these keys will come in
+        misc_bonus = 0
+        for bonus_target in misc_mods.keys():
+            bonus_list = misc_mods[bonus_target]
+            if bonus_target.lower() == skill:
+                misc_bonus = sum([bonus_list[b] for b in bonus_list.keys()])
+
+        return ability_mod + prof_bonus + misc_bonus
 
     def _get_lore_mod(self, lore_name: str, char_data: dict):
         abilities = char_data['abilities']
