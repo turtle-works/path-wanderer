@@ -905,7 +905,8 @@ class PathWanderer(commands.Cog):
         processed_flags = self._get_base_flags()
 
         # prepend a space so the flag finding will succeed even with no query. hey, if it works...
-        query_str = " " + query_str
+        # also append a space so argless flags at the end won't poison the previous flag's arg
+        query_str = " " + query_str + " "
 
         flag_locs = []
         search_start = 0
