@@ -657,12 +657,7 @@ class PathWanderer(commands.Cog):
 
     @commands.command(aliases=["a", "pfa", "pfattack"])
     async def attack(self, ctx, *, query: str):
-        """Attack with a weapon.
-        
-        To-hit bonuses can be added with the -b flag. Examples:
-        `[p]attack dagger -b 1`
-        `[p]attack staff -b -1`
-        """
+        """Attack with a weapon."""
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
             await ctx.send("Set an active character first with `character setactive`.")
@@ -678,9 +673,6 @@ class PathWanderer(commands.Cog):
         """Attack multiple times with a weapon.
         
         Multiple attack penalty will apply.
-        To-hit bonuses, which will apply to all attacks, can be added with the -b flag. Examples:
-        `[p]multiattack 3 shortsword -b 1`
-        `[p]multiattack 2 sling -b +1-1+1`
         """
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
@@ -766,10 +758,6 @@ class PathWanderer(commands.Cog):
         """Make another attack on the current turn.
         
         If no weapon is given, uses the most recently used weapon. Multiple attack penalty applies.
-        To-hit bonuses can be added with the -b flag. Examples:
-        `[p]repeatattack`
-        `[p]repeatattack shortbow`
-        `[p]repeatattack -b 1`
         """
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
@@ -1277,7 +1265,8 @@ class PathWanderer(commands.Cog):
     async def feats(self, ctx):
         """List the active character's feats and specials.
         
-        This is a list of what's on the Pathbuilder 2e Feats tab."""
+        This is a list of what's on the Pathbuilder 2e Feats tab.
+        """
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
             await ctx.send("Set an active character first with `character setactive`.")
@@ -1457,12 +1446,7 @@ class PathWanderer(commands.Cog):
     # TODO: these should probably be refactored if possible?
     @commands.command()
     async def research(self, ctx, dtp: int, dc: int, *, query: str):
-        """Spend downtime doing research.
-        
-        Bonuses can be added with the -b flag. Examples:
-        `[p]research 2 23 arcana`
-        `[p]research 1 18 diplomacy -b 2`
-        """
+        """Spend downtime doing research."""
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
             await ctx.send("Set an active character first with `character setactive`.")
@@ -1526,22 +1510,12 @@ class PathWanderer(commands.Cog):
 
     @commands.command()
     async def legalwork(self, ctx, dtp: int, level: int, *, query: str):
-        """Spend downtime doing legal work.
-
-        Bonuses can be added with the -b flag. Examples:
-        `[p]legalwork 2 3 medicine`
-        `[p]legalwork 8 4 crafting -b 2`
-        """
+        """Spend downtime doing legal work."""
         await self._work(ctx, dtp, level, query, 'legal')
 
     @commands.command()
     async def criminalwork(self, ctx, dtp: int, level: int, *, query: str):
-        """Spend downtime doing criminal work.
-
-        Bonuses can be added with the -b flag. Examples:
-        `[p]criminalwork 12 3 athletics`
-        `[p]criminalwork 4 5 intimidation -b 2`
-        """
+        """Spend downtime doing criminal work."""
         await self._work(ctx, dtp, level, query, 'criminal')
 
     async def _work(self, ctx, dtp: int, level: int, query: str, work_type: str):
