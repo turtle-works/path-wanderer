@@ -172,13 +172,8 @@ class PathWanderer(commands.Cog):
     @commands.command(name="import", aliases=["loadchar", "mmimport", "pfimport"])
     async def import_char(self, ctx, url: str):
         """Import from a Pathbuilder 2e JSON."""
-        if re.match(PATHBUILDER_URL_TEMPLATE, url):
-            char_url = url
-        elif re.match(PATHBUILDER_URL_TEMPLATE, HTTP_ROOT + url):
-            char_url = HTTP_ROOT + url
-        elif re.match(JUST_DIGITS, url):
-            char_url = PATHBUILDER_URL_BASE + url
-        else:
+        char_url = self.valid_url_from_query(url)
+        if char_url is None:
             await ctx.send("Couldn't parse that as a link to a Pathbuilder 2e JSON.")
             return
 
@@ -186,12 +181,13 @@ class PathWanderer(commands.Cog):
         async with self.config.user(ctx.author).characters() as characters:
             if json_id in characters:
                 active_char = await self.config.user(ctx.author).active_char()
-                switch_msg = ""
                 if json_id != active_char:
-                    switch_msg = " switch to their sheet with `character setactive` and"
-
-                await ctx.send(f"This character has already been imported,{switch_msg} use " + \
-                    "`update` instead.")
+                    await ctx.send("This character has already been imported, but is not " + \
+                        "currently active. To update, switch to them with `character " + \
+                        "setactive` and then `update`, or directly `update` with this url.")
+                else:
+                    await ctx.send("This character has already been imported and is currently " + \
+                        "active. Use `update` to update.")
                 return
 
         async with aiohttp.ClientSession() as session:
@@ -213,14 +209,34 @@ class PathWanderer(commands.Cog):
             f"({char_data['build']['class']} {char_data['build']['level']}).")
 
     @commands.command(aliases=["pfupdate"])
-    async def update(self, ctx):
-        """Update data for the active character."""
-        json_id = await self.config.user(ctx.author).active_char()
-        if json_id is None:
-            await ctx.send("Set an active character first with `character setactive`.")
-            return
+    async def update(self, ctx, url: str=""):
+        """Update character data.
+        
+        Optionally takes a link to a Pathbuilder 2e JSON as argument.
+        """
+        active_json_id = await self.config.user(ctx.author).active_char()
+        if not url:
+            json_id = active_json_id
+            if json_id is None:
+                await ctx.send("Tried to update active character but no character is active.")
+                return
 
-        char_url = PATHBUILDER_URL_BASE + json_id
+            char_url = PATHBUILDER_URL_BASE + json_id
+        else:
+            char_url = self.valid_url_from_query(url)
+            if char_url is None:
+                await ctx.send("Couldn't parse that as a link to a Pathbuilder 2e JSON.")
+                return
+            json_id = char_url.split("=")[1]
+
+            characters = await self.config.user(ctx.author).characters()
+            if json_id not in characters.keys():
+                await ctx.send("This character was not recognized, `import` them instead.")
+                return
+            else:
+                if json_id != active_json_id:
+                    await ctx.send("Making this character active and updating.")
+                await self.config.user(ctx.author).active_char.set(json_id)
 
         async with aiohttp.ClientSession() as session:
             async with session.get(char_url) as response:
@@ -237,7 +253,19 @@ class PathWanderer(commands.Cog):
 
         await ctx.send(f"Updated data for {char_data['build']['name']} " + \
             f"({char_data['build']['class']} {char_data['build']['level']}). " + \
-            f"(Note that changes cannot be pulled until Export JSON is selected again.)")
+            f"Note that changes cannot be pulled until Export JSON is selected again.")
+
+    def valid_url_from_query(self, url: str):
+        if re.match(PATHBUILDER_URL_TEMPLATE, url):
+            char_url = url
+        elif re.match(PATHBUILDER_URL_TEMPLATE, HTTP_ROOT + url):
+            char_url = HTTP_ROOT + url
+        elif re.match(JUST_DIGITS, url):
+            char_url = PATHBUILDER_URL_BASE + url
+        else:
+            return None
+
+        return char_url
 
     @commands.group(aliases=["char", "pfchar"])
     async def character(self, ctx):
@@ -289,7 +317,9 @@ class PathWanderer(commands.Cog):
             return
 
         await self.config.user(ctx.author).active_char.set(character_id)
-        await ctx.send(f"{characters[character_id]['build']['name']} made active.")
+        char_data = characters[character_id]['build']
+        await ctx.send(f"{char_data['name']} ({char_data['class']} " + \
+            f"{char_data['level']}) made active.")
 
     @character.command(name="setcolor")
     async def character_color(self, ctx, *, color: str):
@@ -374,7 +404,7 @@ class PathWanderer(commands.Cog):
                 await ctx.send(f"Could not find a character to match `{query}`.")
                 return
 
-            name = characters[character_id]['build']['name']
+            char_data = characters[character_id]['build']
             characters.pop(character_id)
 
             async with self.config.user(ctx.author).csettings() as csettings:
@@ -384,7 +414,8 @@ class PathWanderer(commands.Cog):
             if await self.config.user(ctx.author).active_char() == character_id:
                 await self.config.user(ctx.author).active_char.set(None)
 
-            await ctx.send(f"{name} has been removed from your characters.")
+            await ctx.send(f"{char_data['name']} ({char_data['class']} { char_data['level']}) " + \
+                "has been removed from your characters.")
 
     async def json_id_from_query(self, ctx, query: str):
         query = query.lower()
