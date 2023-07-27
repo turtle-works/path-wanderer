@@ -454,13 +454,16 @@ class PathWanderer(commands.Cog):
         check_name = processed_query['query'].lower()
 
         if check_name == "lore":
-            await ctx.send("Please use a specific lore skill. Your options are: " + \
-                ", ".join([lore[0] for lore in char_data['lores']]))
+            await ctx.send("Please use a specific lore skill (and omit the Lore: prefix). " + \
+                "Your options are: " + ", ".join([lore[0] for lore in char_data['lores']]))
             return
 
         skill_type, skill = self.find_skill_type(check_name, char_data)
         if not skill_type:
-            await ctx.send(f"Could not interpret `{check_name}` as a check.")
+            lore_note = ""
+            if check_name.lower().startswith("lore"):
+                lore_note = " Omit the Lore: prefix for lore skills."
+            await ctx.send(f"Could not interpret `{check_name}` as a check.{lore_note}")
             return
         if skill_type == "save":
             await ctx.send(f"`{skill}` is a saving throw.")
@@ -1463,7 +1466,10 @@ class PathWanderer(commands.Cog):
 
         skill_type, skill = self.find_skill_type(check_name, char_data)
         if not skill_type:
-            await ctx.send(f"Could not interpret `{check_name}` as a check.")
+            lore_note = ""
+            if check_name.lower().startswith("lore"):
+                lore_note = " Omit the Lore: prefix if using a lore skill."
+            await ctx.send(f"Could not interpret `{check_name}` as a check.{lore_note}")
             return
 
         if skill_type == "check" or skill_type == "save":
@@ -1536,7 +1542,10 @@ class PathWanderer(commands.Cog):
 
         skill_type, skill = self.find_skill_type(check_name, char_data)
         if not skill_type:
-            await ctx.send(f"Could not interpret `{check_name}` as a check.")
+            lore_note = ""
+            if check_name.lower().startswith("lore"):
+                lore_note = " Omit the Lore: prefix if using a lore skill."
+            await ctx.send(f"Could not interpret `{check_name}` as a check.{lore_note}")
             return
 
         if skill_type == "check":
