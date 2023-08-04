@@ -331,7 +331,8 @@ class PathWanderer(commands.Cog):
         """
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
-            await ctx.send("Set an active character first with `character setactive`.")
+            await ctx.send("No character is active. `import` a new character or switch to an " + \
+                "existing one with `character setactive`.")
             return
 
         data = await self.config.user(ctx.author).characters()
@@ -360,7 +361,8 @@ class PathWanderer(commands.Cog):
         """
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
-            await ctx.send("Set an active character first with `character setactive`.")
+            await ctx.send("No character is active. `import` a new character or switch to an " + \
+                "existing one with `character setactive`.")
             return
 
         data = await self.config.user(ctx.author).characters()
@@ -443,7 +445,8 @@ class PathWanderer(commands.Cog):
         """Make a skill check as the active character."""
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
-            await ctx.send("Set an active character first with `character setactive`.")
+            await ctx.send("No character is active. `import` a new character or switch to an " + \
+                "existing one with `character setactive`.")
             return
 
         data = await self.config.user(ctx.author).characters()
@@ -535,7 +538,8 @@ class PathWanderer(commands.Cog):
         """Make a saving throw as the active character."""
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
-            await ctx.send("Set an active character first with `character setactive`.")
+            await ctx.send("No character is active. `import` a new character or switch to an " + \
+                "existing one with `character setactive`.")
             return
 
         data = await self.config.user(ctx.author).characters()
@@ -663,7 +667,8 @@ class PathWanderer(commands.Cog):
         """Attack with a weapon."""
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
-            await ctx.send("Set an active character first with `character setactive`.")
+            await ctx.send("No character is active. `import` a new character or switch to an " + \
+                "existing one with `character setactive`.")
             return
 
         data = await self.config.user(ctx.author).characters()
@@ -679,7 +684,8 @@ class PathWanderer(commands.Cog):
         """
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
-            await ctx.send("Set an active character first with `character setactive`.")
+            await ctx.send("No character is active. `import` a new character or switch to an " + \
+                "existing one with `character setactive`.")
             return
 
         data = await self.config.user(ctx.author).characters()
@@ -764,7 +770,8 @@ class PathWanderer(commands.Cog):
         """
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
-            await ctx.send("Set an active character first with `character setactive`.")
+            await ctx.send("No character is active. `import` a new character or switch to an " + \
+                "existing one with `character setactive`.")
             return
 
         data = await self.config.user(ctx.author).characters()
@@ -1008,7 +1015,8 @@ class PathWanderer(commands.Cog):
         """List the active character's spells."""
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
-            await ctx.send("Set an active character first with `character setactive`.")
+            await ctx.send("No character is active. `import` a new character or switch to an " + \
+                "existing one with `character setactive`.")
             return
 
         data = await self.config.user(ctx.author).characters()
@@ -1102,7 +1110,8 @@ class PathWanderer(commands.Cog):
         """Show the active character's sheet."""
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
-            await ctx.send("Set an active character first with `character setactive`.")
+            await ctx.send("No character is active. `import` a new character or switch to an " + \
+                "existing one with `character setactive`.")
             return
 
         data = await self.config.user(ctx.author).characters()
@@ -1272,7 +1281,8 @@ class PathWanderer(commands.Cog):
         """
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
-            await ctx.send("Set an active character first with `character setactive`.")
+            await ctx.send("No character is active. `import` a new character or switch to an " + \
+                "existing one with `character setactive`.")
             return
 
         data = await self.config.user(ctx.author).characters()
@@ -1320,7 +1330,8 @@ class PathWanderer(commands.Cog):
         """List the active character's Assurance skills, if they have any."""
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
-            await ctx.send("Set an active character first with `character setactive`.")
+            await ctx.send("No character is active. `import` a new character or switch to an " + \
+                "existing one with `character setactive`.")
             return
 
         data = await self.config.user(ctx.author).characters()
@@ -1353,7 +1364,8 @@ class PathWanderer(commands.Cog):
         """List the active character's gear."""
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
-            await ctx.send("Set an active character first with `character setactive`.")
+            await ctx.send("No character is active. `import` a new character or switch to an " + \
+                "existing one with `character setactive`.")
             return
 
         data = await self.config.user(ctx.author).characters()
@@ -1452,7 +1464,8 @@ class PathWanderer(commands.Cog):
         """Spend downtime doing research."""
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
-            await ctx.send("Set an active character first with `character setactive`.")
+            await ctx.send("No character is active. `import` a new character or switch to an " + \
+                "existing one with `character setactive`.")
             return
 
         data = await self.config.user(ctx.author).characters()
@@ -1527,7 +1540,8 @@ class PathWanderer(commands.Cog):
     async def _work(self, ctx, dtp: int, level: int, query: str, work_type: str):
         json_id = await self.config.user(ctx.author).active_char()
         if json_id is None:
-            await ctx.send("Set an active character first with `character setactive`.")
+            await ctx.send("No character is active. `import` a new character or switch to an " + \
+                "existing one with `character setactive`.")
             return
 
         data = await self.config.user(ctx.author).characters()
