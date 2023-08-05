@@ -17,7 +17,7 @@ AON_SEARCH_BASE = "https://2e.aonprd.com/Search.aspx?q="
 
 SPELL_SLOT_SYMBOL = "✦"
 
-KNOWN_FLAGS = ["ac", "b", "d", "dc", "phrase", "rr"]
+KNOWN_FLAGS = ["ac", "b", "d", "dc", "kp", "phrase", "rr"]
 DOUBLE_QUOTES = ["\"", "“", "”"]
 
 CRIT_SUCCESS = 2
@@ -1496,12 +1496,14 @@ class PathWanderer(commands.Cog):
             return
 
         bonus_str = self._get_rollable_arg(processed_query['b'])
+        kp_str = self._get_single_rollable_arg(processed_query['kp'])
 
         name = char_data['name']
 
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name} does some research!"
 
+        kp_limit = d20.roll(kp_str).total if kp_str else None
         total_kp = 0
         for i in range(dtp):
             research_roll = d20.roll(self.make_dice_string(mod, bonus_str))
@@ -1518,6 +1520,9 @@ class PathWanderer(commands.Cog):
 
             total_kp += kp
             embed.add_field(name=f"DTP {i + 1}: {kp} KP", value=str(research_roll))
+
+            if kp_limit and total_kp >= kp_limit:
+                break
 
         if skill_type != "lore":
             skill = skill.capitalize()
