@@ -183,8 +183,8 @@ class PathWanderer(commands.Cog):
                 active_char = await self.config.user(ctx.author).active_char()
                 if json_id != active_char:
                     await ctx.send("This character has already been imported, but is not " + \
-                        "currently active. To update, switch to them with `character " + \
-                        "setactive` and then `update`, or directly `update` with this url.")
+                        "currently active. Use `update <JSON ID or link>` to update and switch" + \
+                        "to them.")
                 else:
                     await ctx.send("This character has already been imported and is currently " + \
                         "active. Use `update` to update.")
