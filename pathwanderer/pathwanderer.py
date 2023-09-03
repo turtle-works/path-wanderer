@@ -183,8 +183,8 @@ class PathWanderer(commands.Cog):
                 active_char = await self.config.user(ctx.author).active_char()
                 if json_id != active_char:
                     await ctx.send("This character has already been imported, but is not " + \
-                        "currently active. Use `update <JSON ID or link>` to update and switch" + \
-                        "to them.")
+                        "currently active. Use `update <JSON ID or link>` to update and " + \
+                        "switch to them.")
                 else:
                     await ctx.send("This character has already been imported and is currently " + \
                         "active. Use `update` to update.")
@@ -624,10 +624,13 @@ class PathWanderer(commands.Cog):
         abilities = char_data['abilities']
         level = char_data['level']
         profs = char_data['proficiencies']
+        feats = char_data['feats']
         misc_mods = char_data['mods']
 
         ability_mod = self._get_ability_mod(abilities[SKILL_DATA[skill][ABILITY]])
         prof_bonus = profs[skill] + (0 if profs[skill] == 0 else level)
+
+        prof_bonus += self._get_untrained_bonus(level, feats)
 
         # TODO: no guarantee what format these keys will come in
         misc_bonus = 0
@@ -637,6 +640,13 @@ class PathWanderer(commands.Cog):
                 misc_bonus = sum([bonus_list[b] for b in bonus_list.keys()])
 
         return ability_mod + prof_bonus + misc_bonus
+
+    def _get_untrained_bonus(self, level: int, feats: list):
+        bonus = 0
+        for feat in feats:
+            if feat[0] == 'Untrained Improvisation':
+                bonus = math.floor(level / 2) if level < 7 else level
+        return bonus
 
     def _get_lore_mod(self, lore_name: str, char_data: dict):
         abilities = char_data['abilities']
