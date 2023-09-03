@@ -630,7 +630,9 @@ class PathWanderer(commands.Cog):
         ability_mod = self._get_ability_mod(abilities[SKILL_DATA[skill][ABILITY]])
         prof_bonus = profs[skill] + (0 if profs[skill] == 0 else level)
 
-        prof_bonus += self._get_untrained_bonus(level, feats)
+        # add untrained improvisation bonus to untrained checks
+        if prof_bonus == 0:
+            prof_bonus += self._get_untrained_bonus(level, feats)
 
         # TODO: no guarantee what format these keys will come in
         misc_bonus = 0
