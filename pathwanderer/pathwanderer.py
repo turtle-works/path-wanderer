@@ -644,7 +644,7 @@ class PathWanderer(commands.Cog):
     def _get_untrained_bonus(self, level: int, feats: list):
         bonus = 0
         for feat in feats:
-            if feat[0] == 'Untrained Improvisation':
+            if feat[0] == "Untrained Improvisation":
                 bonus = math.floor(level / 2) if level < 7 else level
         return bonus
 
@@ -1570,11 +1570,16 @@ class PathWanderer(commands.Cog):
         check_name = processed_query['query'].lower()
 
         skill_type, skill = self.find_skill_type(check_name, char_data)
+        for weapon in char_data['weapons']:
+            if check_name in weapon['display'].lower():
+                skill_type = "weapon"
+                skill = weapon
+
         if not skill_type:
             lore_note = ""
             if check_name.lower().startswith("lore"):
                 lore_note = " Omit the Lore: prefix if using a lore skill."
-            await ctx.send(f"Could not interpret `{check_name}` as a check.{lore_note}")
+            await ctx.send(f"Could not interpret `{check_name}` as a check or weapon.{lore_note}")
             return
 
         if skill_type == "check":
@@ -1586,12 +1591,27 @@ class PathWanderer(commands.Cog):
             for lore in char_data['lores']:
                 if lore[0] == skill:
                     prof = lore[1]
+        elif skill_type == "weapon":
+            # skill is a weapon object in this case
+            mod = skill['attack']
+
+            specifics = char_data['specificProficiencies']
+            if skill['name'] in specifics['trained']:
+                prof = 2
+            elif skill['name'] in specifics['expert']:
+                prof = 4
+            elif skill['name'] in specifics['master']:
+                prof = 6
+            elif skill['name'] in specifics['legendary']:
+                prof = 8
+            else:
+                prof = char_data['proficiencies'][skill['prof']]
         else:
             await ctx.send(f"Cannot use `{check_name}`.")
             return
 
         if prof < 2:
-            await ctx.send("You must be trained in a skill to use it for work.")
+            await ctx.send("You must be trained in a skill or weapon to use it for work.")
             return
 
         bonus_str = self._get_rollable_arg(processed_query['b'])
@@ -1664,7 +1684,10 @@ class PathWanderer(commands.Cog):
             embed.add_field(name=field_title, value=work_field, inline=inline)
 
         if skill_type != "lore":
-            skill = skill.capitalize()
+            if skill_type == "weapon":
+                skill = skill['display']
+            else:
+                skill = skill.capitalize()
 
         embed.description = f"DC {dc} {skill} (Level {level})\n" + \
             f"Total pay from this session: **{self._get_parsed_coins(total_sp)}**"
