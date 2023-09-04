@@ -1058,9 +1058,10 @@ class PathWanderer(commands.Cog):
             focus_field_name = f"Focus {focus_points * SPELL_SLOT_SYMBOL}"
             focus_field = ""
             if focus_cantrips:
-                focus_field += "**Cantrip**: " + ", ".join(focus_cantrips)
+                focus_field += "**Cantrip**: " + \
+                    ", ".join([self.make_markdown_search_links(s) for s in focus_cantrips])
                 focus_field += "\n**Spell**: "
-            focus_field += ", ".join(focus_spells)
+            focus_field += ", ".join([self.make_markdown_search_link(s) for s in focus_spells])
             embed.add_field(name=focus_field_name, value=focus_field, inline=False)
 
         spellcasting = char_data['spellCasters']
@@ -1072,7 +1073,7 @@ class PathWanderer(commands.Cog):
                 all_leveled_spells = source['spells']
                 for leveled_spells in all_leveled_spells:
                     level = leveled_spells['spellLevel']
-                    spells = leveled_spells['list']
+                    spells = [self.make_markdown_search_link(s) for s in leveled_spells['list']]
                     if level not in available_spells:
                         available_spells[level] = spells
                     else:
@@ -1108,6 +1109,8 @@ class PathWanderer(commands.Cog):
             formulae = []
             for source in formula:
                 formulae.extend(source['known'])
+            # TODO: cut into pages and implement?
+            # formula_field = ", ".join([self.make_markdown_search_link(f) for f in formulae])
             formula_field = ", ".join(formulae)
             formula_field_name = f"Formulae ({len(formulae)})"
             embed.add_field(name=formula_field_name, value=formula_field, inline=False)
@@ -1116,6 +1119,10 @@ class PathWanderer(commands.Cog):
         embed.description = f"{char_data['name']} has {spell_count} spell{plural}."
 
         await ctx.send(embed=embed)
+
+    def make_markdown_search_link(self, spell_name: str):
+            aon_link = AON_SEARCH_BASE + urllib.parse.quote_plus(spell_name)
+            return f"[{spell_name}]({aon_link})"
 
     @commands.command(aliases=["pfsheet"])
     async def sheet(self, ctx):
