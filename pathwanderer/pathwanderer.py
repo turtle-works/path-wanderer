@@ -1059,7 +1059,7 @@ class PathWanderer(commands.Cog):
             focus_field = ""
             if focus_cantrips:
                 focus_field += "**Cantrip**: " + \
-                    ", ".join([self.make_markdown_search_links(s) for s in focus_cantrips])
+                    ", ".join([self.make_markdown_search_link(s) for s in focus_cantrips])
                 focus_field += "\n**Spell**: "
             focus_field += ", ".join([self.make_markdown_search_link(s) for s in focus_spells])
             embed.add_field(name=focus_field_name, value=focus_field, inline=False)
