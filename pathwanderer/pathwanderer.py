@@ -1,4 +1,7 @@
+import csv
+import io
 import json
+import logging
 import math
 import random
 import re
@@ -8,6 +11,8 @@ import aiohttp
 import discord
 import d20
 from redbot.core import Config, commands
+
+logger = logging.getLogger("red.pathwanderer")
 
 HTTP_ROOT = "https://"
 PATHBUILDER_URL_BASE = "https://pathbuilder2e.com/json.php?id="
@@ -90,33 +95,6 @@ RANGED_WEAPONS = ["Blowgun", "Bola", "Bomb", "Bow Staff - Ranged", "Composite Lo
 
 STR_THRESH = 0
 PENALTY = 1
-ARMOR_DATA = {
-    'Bastion Plate': (18, -3),
-    'Breastplate': (16, -2),
-    'Buckle Armor': (12, -1),
-    'Ceramic Plate': (14, -2),
-    'Chain Mail': (16, -2),
-    'Chain Shirt': (12, -1),
-    'Coral Armor': (14, -2),
-    'Fortress Plate': (18, -3),
-    'Full Plate': (18, -3),
-    'Half Plate': (16, -3),
-    'Hide Armor': (14, -2),
-    'Lamellar Breastplate': (16, -2),
-    'Lattice Armor': (16, -2),
-    'Leaf Weave': (10, -1),
-    'Leather Armor': (10, -1),
-    'Leather Lamellar': (10, -1),
-    'Niyah\u00e1at': (14, -2),
-    'O-Yoroi': (18, -3),
-    'Padded Armor': (10, 0),
-    'Quilted Armor': (12, -1),
-    'Sankeit': (12, -1),
-    'Scale Mail': (14, -2),
-    'Splint Mail': (16, -3),
-    'Studded Leather Armor': (12, -1),
-    'Wooden Breastplate': (14, -2)
-}
 
 WORK_DC = 0
 TRAINED_PAY = 1
@@ -151,6 +129,8 @@ class PathWanderer(commands.Cog):
         self.config = Config.get_conf(self, identifier=34263737)
         self.config.register_user(active_char=None, characters={}, csettings={}, preferences={})
 
+        self.armor_data = {}
+
     async def red_get_data_for_user(self, *, user_id):
         """Get a user's personal data."""
         characters = await self.config.user_from_id(user_id).characters()
@@ -168,6 +148,25 @@ class PathWanderer(commands.Cog):
         Imported Pathfinder 2e character data is stored by this cog.
         """
         await self.config.user_from_id(user_id).clear()
+
+    async def reload_pf_data(self):
+        await self.load_armor_data()
+
+    async def load_armor_data(self):
+        await self.bot.wait_until_ready()
+        # TODO: pull out into a separate function?
+        url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ41URZr-5E3wPhH3NVkI1N7_" + \
+            "p07xPn7Ps8KVG8uSnFLWEaj-Ywu0KBvGQmfRmIucxcFfAbQNmA79Q5/pub?gid=835452719&output=csv"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                reader = csv.reader(io.StringIO(await response.text()), delimiter=',')
+        next(reader)
+        try:
+            for line in reader:
+                self.armor_data[line[0]] = (int(line[1]), int(line[2]))
+        except(ValueError):
+            logger.exception("Armor data load failed. " + \
+                "Please refer to the formatting guide and give it another check.")
 
     @commands.command(name="import", aliases=["loadchar", "mmimport", "pfimport"])
     async def import_char(self, ctx, url: str):
@@ -1255,13 +1254,13 @@ class PathWanderer(commands.Cog):
 
         worn_armor = None
         for armor in all_armor:
-            if armor['worn'] and armor['name'] in ARMOR_DATA:
+            if armor['worn'] and armor['name'] in self.armor_data:
                 worn_armor = armor
         if not worn_armor:
             return 0
 
         strength = char_data['abilities']['str']
-        data = ARMOR_DATA[worn_armor['name']]
+        data = self.armor_data[worn_armor['name']]
 
         if strength < data[STR_THRESH]:
             return data[PENALTY]
