@@ -23,6 +23,8 @@ AON_SEARCH_BASE = "https://2e.aonprd.com/Search.aspx?q="
 DB_URL_BASE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ41URZr-5E3wPhH3NVkI1N7_" + \
     "p07xPn7Ps8KVG8uSnFLWEaj-Ywu0KBvGQmfRmIucxcFfAbQNmA79Q5/pub?gid={}&output=csv"
 ARMOR_TAB = "835452719"
+WEAPON_TAB = "681785566"
+NUM_WEAPON_TRAITS = 4
 
 SPELL_SLOT_SYMBOL = "✦"
 
@@ -66,37 +68,6 @@ SKILL_DATA = {
     'wisdom': ("ability", "wis")
 }
 
-# possible allowed options
-AGILE_WEAPONS = ["Blowgun", "Butterfly Sword", "Clan Dagger", "Claw Blade", "Corset Knife",
-    "Dagger", "Dart", "Dogslicer", "Feng Huo Lun", "Fighting Fan", "Filcher's Fork", "Fist",
-    "Flyssa", "Gauntlet", "Hatchet", "Kama", "Katar", "Kukri", "Light Hammer", "Light Mace",
-    "Light Pick", "Main-gauche", "Orc Knuckle Dagger", "Sai", "Sap", "Sawtooth Saber",
-    "Shortsword", "Shuriken", "Sickle", "Special Unarmed (1d4)", "Special Unarmed (1d6)",
-    "Special Unarmed (1d8)", "Special Unarmed (1d10)", "Special Unarmed Cobra Fang",
-    "Special Unarmed Crane Wing", "Special Unarmed Lashing Branch",
-    "Special Unarmed Shadow Grasp", "Special Unarmed Stumbling Swing",
-    "Special Unarmed Tiger Claw", "Special Unarmed Wind Crash", "Special Unarmed Wolf Jaw",
-    "Spiked Gauntlet", "Starknife", "Sword Cane", "Tekko-Kagi", "Tengu Gale Blade",
-    "Thunder Sling", "Wakizashi", "War Razor", "Whipstaff"]
-FINESSE_WEAPONS = ["Bow Staff - Melee", "Butterfly Sword", "Claw Blade", "Combat Lure",
-    "Corset Knife", "Dagger", "Dancer's Spear", "Dogslicer", "Dueling Sword", "Elven Curve Blade",
-    "Feng Huo Lun", "Fighting Fan", "Filcher's Fork", "Fist", "Flyssa", "Karambit", "Kukri",
-    "Light Mace", "Main-gauche", "Rapier", "Sai", "Sawtooth Saber", "Shears", "Shortsword",
-    "Sickle", "Special Unarmed (1d4)", "Special Unarmed (1d6)", "Special Unarmed (1d8)",
-    "Special Unarmed (1d10)", "Special Unarmed Cobra Fang", "Special Unarmed Crane Wing",
-    "Special Unarmed Lashing Branch", "Special Unarmed Stumbling Swing",
-    "Special Unarmed Tiger Claw", "Special Unarmed Wolf Jaw", "Spiked Chain", "Starknife",
-    "Sword Cane", "Tekko-Kagi", "Tengu Gale Blade", "Wakizashi", "War Razor", "Whip", "Whipstaff"]
-PROPULSIVE_WEAPONS = ["Composite Longbow", "Composite Shortbow", "Daikyu", "Gakgung",
-    "Halfling Sling Staff", "Mikazuki - Ranged", "Phalanx Piercer", "Sling",
-    "Special Unarmed Wind Crash", "Spraysling", "Thunder Sling"]
-RANGED_WEAPONS = ["Blowgun", "Bola", "Bomb", "Bow Staff - Ranged", "Composite Longbow",
-    "Composite Shortbow", "Crescent Cross - Ranged", "Crossbow", "Daikyu", "Dart", "Gakgung",
-    "Gauntlet Bow", "Halfling Sling Staff", "Hand Crossbow", "Harpoon", "Heavy Crossbow",
-    "Javelin", "Lancer - Ranged", "Longbow", "Mikazuki - Ranged", "Phalanx Piercer", "Rotary Bow",
-    "Shield Bow", "Shortbow", "Shuriken", "Sling", "Special Unarmed Wind Crash", "Spraysling",
-    "Sukgung", "Thunder Sling", "Wrecker - Ranged"]
-
 STR_THRESH = 0
 PENALTY = 1
 
@@ -134,6 +105,7 @@ class PathWanderer(commands.Cog):
         self.config.register_user(active_char=None, characters={}, csettings={}, preferences={})
 
         self.armor_data = {}
+        self.weapon_data = {}
 
     async def red_get_data_for_user(self, *, user_id):
         """Get a user's personal data."""
@@ -155,6 +127,7 @@ class PathWanderer(commands.Cog):
 
     async def reload_pf_data(self):
         await self.load_armor_data()
+        await self.load_weapons()
 
     async def load_armor_data(self):
         await self.bot.wait_until_ready()
@@ -165,6 +138,15 @@ class PathWanderer(commands.Cog):
         except(ValueError):
             logger.exception("Armor data load failed. " + \
                 "Please refer to the formatting guide and give it another check.")
+
+    async def load_weapons(self):
+        await self.bot.wait_until_ready()
+        reader = await self._get_from_gsheet(WEAPON_TAB)
+        try:
+            for line in reader:
+                self.weapon_data[line[0]] = line[1:NUM_WEAPON_TRAITS + 1]
+        except:
+            logger.exception("Weapon data load failed.")
 
     async def _get_from_gsheet(self, tab: str):
         url = DB_URL_BASE.format(tab)
@@ -756,7 +738,7 @@ class PathWanderer(commands.Cog):
         else:
             total_damage = 0
             for i in range(num_attacks):
-                penalty = 4 if weapon['name'] in AGILE_WEAPONS else 5
+                penalty = 4 if self.weapon_has_trait(weapon['name'], "agile") else 5
                 penalty = penalty * 2 if i > 1 else penalty if i > 0 else 0
                 output, attack_roll, damage_roll = self.make_attack_block(to_hit - penalty,
                     damage_mod, to_hit_bonus_str, damage_bonus_str, ac_str, num_dice,
@@ -836,7 +818,7 @@ class PathWanderer(commands.Cog):
             to_hit_bonus_str = self._get_rollable_arg(processed_query['b'])
             damage_bonus_str = self._get_rollable_arg(processed_query['d'])
 
-            penalty = 4 if weapon['name'] in AGILE_WEAPONS else 5
+            penalty = 4 if self.weapon_has_trait(weapon['name'], "agile") else 5
             penalty = penalty * 2 if num_attacks > 1 else penalty if num_attacks > 0 else 0
             output, _, _ = self.make_attack_block(to_hit - penalty, damage_mod, to_hit_bonus_str,
                 damage_bonus_str, ac_str, num_dice, die_size=die_size or 1)
@@ -861,18 +843,18 @@ class PathWanderer(commands.Cog):
         # specifics = char_data['specificProficiencies']
 
 		# # have to manually do all this stuff
-        # if weapon['name'] in FINESSE_WEAPONS:
+        # if self.weapon_has_trait(weapon['name'], "finesse"):
         #     ability_mod = self._get_ability_mod(max(abilities['str'], abilities['dex']))
-        # elif weapon['name'] in RANGED_WEAPONS:
+        # elif self.weapon_has_trait(weapon['name'], "ranged"):
         #     ability_mod = self._get_ability_mod(abilities['dex'])
         # else:
         #     ability_mod = self._get_ability_mod(abilities['str'])
 
         # # TODO: how to establish when a weapon is being thrown?
-        # if weapon['name'] in PROPULSIVE_WEAPONS:
+        # if self.weapon_has_trait(weapon['name'], "propulsive"):
         #     str_mod = self._get_ability_mod(abilities['str'])
         #     damage_mod = math.floor(str_mod / 2) if str_mod > 0 else str_mod
-        # elif weapon['name'] in RANGED_WEAPONS:
+        # elif self.weapon_has_trait(weapon['name'], "ranged"):
         #     damage_mod = 0
         # else:
         #     damage_mod = self._get_ability_mod(abilities['str'])
@@ -890,6 +872,9 @@ class PathWanderer(commands.Cog):
         # prof_bonus = prof + (0 if prof == 0 else level)
 
         # return ability_mod + prof_bonus + weapon['pot'], damage_mod
+
+    def weapon_has_trait(self, weapon_name: str, trait: str):
+        return weapon_name in self.weapon_data and trait in self.weapon_data[weapon_name]
 
     def _get_num_damage_dice(self, striking_rune: str):
         if striking_rune == "majorStriking":
