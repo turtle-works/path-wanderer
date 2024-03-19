@@ -20,6 +20,10 @@ JUST_DIGITS = r"\d+$"
 PATHBUILDER_URL_TEMPLATE = r"https://pathbuilder2e.com/json.php\?id=\d+$"
 AON_SEARCH_BASE = "https://2e.aonprd.com/Search.aspx?q="
 
+DB_URL_BASE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ41URZr-5E3wPhH3NVkI1N7_" + \
+    "p07xPn7Ps8KVG8uSnFLWEaj-Ywu0KBvGQmfRmIucxcFfAbQNmA79Q5/pub?gid={}&output=csv"
+ARMOR_TAB = "835452719"
+
 SPELL_SLOT_SYMBOL = "✦"
 
 KNOWN_FLAGS = ["ac", "b", "d", "dc", "kp", "phrase", "rr"]
@@ -154,19 +158,22 @@ class PathWanderer(commands.Cog):
 
     async def load_armor_data(self):
         await self.bot.wait_until_ready()
-        # TODO: pull out into a separate function?
-        url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ41URZr-5E3wPhH3NVkI1N7_" + \
-            "p07xPn7Ps8KVG8uSnFLWEaj-Ywu0KBvGQmfRmIucxcFfAbQNmA79Q5/pub?gid=835452719&output=csv"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                reader = csv.reader(io.StringIO(await response.text()), delimiter=',')
-        next(reader)
+        reader = await self._get_from_gsheet(ARMOR_TAB)
         try:
             for line in reader:
                 self.armor_data[line[0]] = (int(line[1]), int(line[2]))
         except(ValueError):
             logger.exception("Armor data load failed. " + \
                 "Please refer to the formatting guide and give it another check.")
+
+    async def _get_from_gsheet(self, tab: str):
+        url = DB_URL_BASE.format(tab)
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                reader = csv.reader(io.StringIO(await response.text()), delimiter=',')
+        # skip header
+        next(reader)
+        return reader
 
     @commands.command(name="import", aliases=["loadchar", "mmimport", "pfimport"])
     async def import_char(self, ctx, url: str):
