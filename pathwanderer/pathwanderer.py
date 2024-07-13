@@ -24,7 +24,7 @@ DB_URL_BASE = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ41URZr-5E3wPhH3
     "p07xPn7Ps8KVG8uSnFLWEaj-Ywu0KBvGQmfRmIucxcFfAbQNmA79Q5/pub?gid={}&output=csv"
 ARMOR_TAB = "835452719"
 WEAPON_TAB = "681785566"
-NUM_WEAPON_TRAITS = 4
+NUM_WEAPON_TRAITS = 8
 
 SPELL_SLOT_SYMBOL = "✦"
 
@@ -84,11 +84,11 @@ WORK_DATA = {
         8: [24, 100, 200, 280, 360, 20]
     },
     'criminal': {
-        3: [18, 50, 60, 70, 70],
-        4: [19, 60, 70, 90, 90],
-        5: [20, 70, 90, 120, 120],
-        6: [22, 80, 120, 180, 180],
-        7: [23, 90, 180, 240, 240],
+        3: [18, 50, 60, 70, 90],
+        4: [19, 60, 70, 90, 110],
+        5: [20, 70, 90, 120, 170],
+        6: [22, 80, 120, 180, 230],
+        7: [23, 90, 180, 240, 320],
         8: [24, 120, 240, 320, 320]
     }
 }
@@ -1670,13 +1670,13 @@ class PathWanderer(commands.Cog):
                     deduction = f"-{self._get_parsed_coins(pay_rates[TRAINED_PAY])}"
                     total_sp -= pay_rates[TRAINED_PAY]
                 elif penalty.total == 3:
-                    penalty_message += "Rumors of your criminal activity have made it to " + \
-                        "the ears of important people. Lose 1 FP with the faction you " + \
-                        "have the most FP with. If there is a tie, you can choose between " + \
-                        "the tied factions."
+                    penalty_message += "Rumors of your activity have made it to the ears of " + \
+                        "important people. Lose 1 FP with the faction you have the most FP " + \
+                        "with. If there is a tie, you can choose between the tied factions."
                 else:
                     penalty_message += "Something went wrong, and you got injured along " + \
-                        "the way. At the start of your next mission, you have taken 5 damage."
+                        "the way. For the duration of your next mission, you are " + \
+                        "[fatigued](https://2e.aonprd.com/Conditions.aspx?ID=73&Redirected=1)."
                 work_field += penalty_message
 
             coins = self._get_parsed_coins(payments[i])
