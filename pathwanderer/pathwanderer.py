@@ -93,6 +93,15 @@ WORK_DATA = {
     }
 }
 
+CRAFTING_DCS = [14, 15, 16, 18, 19, 20, 22, 23]
+EXTENDED_CRAFTING = {
+    3: [40, 50, 60, 70, 90],
+    4: [50, 60, 70, 90, 110],
+    5: [60, 70, 90, 120, 170],
+    6: [70, 80, 120, 180, 230],
+    7: [80, 90, 180, 240, 320]
+}
+
 
 class PathWanderer(commands.Cog):
     """Cog that lets users do simple things for Pathfinder 2e."""
@@ -1703,3 +1712,68 @@ class PathWanderer(commands.Cog):
         gp_str = f"{gp} gp" if gp else ""
 
         return f"{gp_str}, {sp_str}" if gp and sp else gp_str if gp else sp_str if sp else "0 gp"
+
+    @commands.command()
+    async def craft(self, ctx, starting_dtp: int, level: int, *, query: str=""):
+        """Calculate downtime crafting cost in DTP and gold."""
+        json_id = await self.config.user(ctx.author).active_char()
+        if json_id is None:
+            await ctx.send("No character is active. `import` a new character or switch to an " + \
+                "existing one with `character setactive`.")
+            return
+
+        data = await self.config.user(ctx.author).characters()
+        char_data = data[json_id]['build']
+
+        starting_dtp = min(max(starting_dtp, 1), 2)
+        dtp = starting_dtp
+        # level here is item level
+        level = min(max(level, 0), 7)
+
+        processed_query = self.process_query(query)
+
+        dc = CRAFTING_DCS[level]
+
+        prof = char_data['proficiencies']['crafting']
+
+        if prof < 2:
+            await ctx.send("You must be trained in Crafting to craft an item.")
+            return
+
+        mod = self._get_skill_mod('crafting', char_data)
+        bonus_str = self._get_rollable_arg(processed_query['b'])
+
+        crafting_roll = d20.roll(self.make_dice_string(mod, bonus_str))
+
+        char_level = min(max(char_data['level'], 3), 7)
+        gp_rates = EXTENDED_CRAFTING[char_level]
+
+        degree, label = self._get_degree_of_success(crafting_roll.total, crafting_roll.crit, dc)
+        if degree == CRIT_SUCCESS:
+            increased_prof = min(8, prof + 2)
+            gp_increment = gp_rates[int(increased_prof / 2)]
+        elif degree == SUCCESS:
+            gp_increment = gp_rates[int(prof / 2)]
+        elif degree == FAILURE:
+            dtp += 1
+            decreased_prof = max(prof - 2, 0)
+            gp_increment = gp_rates[int(decreased_prof / 2)]
+        else:
+            gp_increment = 0
+
+        name = char_data['name']
+
+        embed = await self._get_base_embed(ctx)
+        embed.title = f"{name} attempts to craft an item!"
+
+        embed.description = f"DC {dc} Crafting (Level {level})"
+
+        if degree == CRIT_FAILURE:
+            embed.add_field(name=f"**{label}**. DTP spent so far: **{dtp}**", value=f"{str(crafting_roll)}\n\nYou fail to craft the item. You can salvage the materials, " + \
+                "but the spent DTP is expended.")
+        else:
+            embed.add_field(name=f"**{label}**. DTP spent so far: **{dtp}**", value=f"{str(crafting_roll)}\n\nTo complete the item, pay the remainder of its Price or " + \
+                "spend additional DTP. Each additional DTP reduces the value of the remaining " + \
+                f"materials needed by **{self._get_parsed_coins(gp_increment)}**.")
+
+        await ctx.send(embed=embed)
