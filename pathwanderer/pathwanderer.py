@@ -1396,6 +1396,10 @@ class PathWanderer(commands.Cog):
         embed = await self._get_base_embed(ctx)
         embed.title = f"{name}'s Gear"
 
+        money = char_data['money']
+        embed.add_field(name="Money", value=f"{money['pp']} pp, {money['gp']} gp, " + \
+            f"{money['sp']} sp, {money['cp']} cp")
+
         # container id or main: [name, [list of items]]
         all_items = {'main': ["Main Inventory", []]}
         containers = char_data['equipmentContainers']
